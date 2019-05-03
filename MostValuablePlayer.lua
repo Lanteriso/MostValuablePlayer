@@ -400,7 +400,7 @@ function MVPFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 	local mapChallengeModeID, affixIDs, keystoneLevel = C_ChallengeMode.GetSlottedKeystoneInfo()
 	print("7 ",mapChallengeModeID, affixIDs, keystoneLevel)
 	]]
-	SendChatMessage("玩家         伤害           额外受伤        治疗     打断      阵亡      评分")
+	SendChatMessage("玩家         伤害           额外受伤        治疗     打断      阵亡      评分","PARTY")
 	for k, v in pairs(DamdgeData) do 
 		if not v then v=0 end
 		if not CombinedFails[k] then CombinedFails[k] = 0 end
