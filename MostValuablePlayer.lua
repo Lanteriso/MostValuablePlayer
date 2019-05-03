@@ -6,6 +6,7 @@ local DeathData = {}--JANY用来记录一次副本里的死亡次数
 local DamdgeData = {}--JANY用来记录一次副本里的总伤害量
 local InterruptData = {}--打断次数
 local score = {}--评分
+local HealData = {} -- 治疗
 local activeUser = nil
 local playerUser = GetUnitName("player",true).."-"..GetRealmName():gsub(" ", "")
 local hardMinPct = 20
@@ -399,16 +400,17 @@ function MVPFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 	local mapChallengeModeID, affixIDs, keystoneLevel = C_ChallengeMode.GetSlottedKeystoneInfo()
 	print("7 ",mapChallengeModeID, affixIDs, keystoneLevel)
 	]]
-	print("玩家     伤害           额外受伤       打断      阵亡      评分")
+	SendChatMessage("玩家         伤害           额外受伤        治疗     打断      阵亡      评分")
 	for k, v in pairs(DamdgeData) do 
 		if not v then v=0 end
 		if not CombinedFails[k] then CombinedFails[k] = 0 end
 		if not InterruptData[k] then InterruptData[k] = 0 end
 		if not DeathData[k] then DeathData[k] = 0 end
+		if not HealData[k] then HealData[k] = 0 end
 		if not score[k] then score[k] = 0 end
 		
-		score[k] = round((v - CombinedFails[k] * 3) / 100000 ,1)+InterruptData[k]-DeathData[k]*3
-		SendChatMessage(k..round(v / 10000 ,1).." 万--"..round(CombinedFails[k] / 10000 ,1).." 万--"..InterruptData[k].." 断--"..DeathData[k].." 亡--"..score[k].." 分","PARTY") --总伤害量 额外受伤 死亡次数  打断次数
+		score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000 ,1)+InterruptData[k]-DeathData[k]*3
+		SendChatMessage(k..round(v / 10000 ,1).." 万--"..round(CombinedFails[k] / 10000 ,1).." 万--"..round(HealData[k] / 10000 ,1).." 万--"..InterruptData[k].." 断--"..DeathData[k].." 亡--"..score[k].." 分","PARTY") --总伤害量 额外受伤 死亡次数  打断次数
 		--print("【sovijo】说：","伤害-额外受伤-打断-死亡-评分-MVP",round((30000000 - 2000000 * 3) / 100000 ,1) + 30 - 5*3)
 	end
 	local fs = { }
@@ -439,6 +441,7 @@ function MVPFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 	DeathData = {}--挑战模式完成时 重置死亡次数为nil  ----jany
 	DamdgeData = {}--挑战模式完成时 重置总伤害为nil---jany
 	InterruptData ={} --打断次数
+	HealData ={}--治疗
 	score={}--评分
 end
 
@@ -447,6 +450,7 @@ function MVPFrame:CHALLENGE_MODE_START(event,...)--挑战模式启动 时重置�
 	DeathData = {}--挑战模式启动时 重置伤害为nil,死亡次数为nil   ----jany
 	DamdgeData = {}--挑战模式启动时 重置总伤害为nil---jany
 	InterruptData ={}--打断次数
+	HealData ={}--治疗
 	score={}
 end
 
@@ -622,7 +626,15 @@ function MVPFrame:InterruptDamage(timestamp, eventType, hideCaster, srcGUID, src
 		end
 	end
 end
-
+--发生治疗事件
+function MVPFrame:SpellHeal(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,amount)
+	if UnitIsPlayer(srcName) then
+		if HealData[srcName] == nil then
+			HealData[srcName] = 0
+		end
+		HealData[srcName] = HealData[srcName] + amount
+	end	
+end
 
 function MVPFrame:SwingDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, aAmount)--玩害普通攻击伤害统计
 
@@ -660,8 +672,6 @@ end
 function MVPFrame:COMBAT_LOG_EVENT_UNFILTERED(event,...)
 	local timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,a12,a13,a14,a15,a16,a17,a18,a19,a20 = CombatLogGetCurrentEventInfo(); -- Those arguments appear for all combat event variants.
 	local eventPrefix, eventSuffix = eventType:match("^(.-)_?([^_]*)$");
-	if eventType == "SWING_DAMAGE" then
-	end
 
 	if (eventPrefix:match("^SPELL") or eventPrefix:match("^RANGE")) and eventSuffix == "DAMAGE" then
 		local spellId, spellName, spellSchool, sAmount, aOverkill, sSchool, sResisted, sBlocked, sAbsorbed, sCritical, sGlancing, sCrushing, sOffhand, _ = select(12,CombatLogGetCurrentEventInfo())
@@ -687,6 +697,15 @@ function MVPFrame:COMBAT_LOG_EVENT_UNFILTERED(event,...)
 		local a12 = select(12,CombatLogGetCurrentEventInfo())
 		local a15 = select(15,CombatLogGetCurrentEventInfo())
 		MVPFrame:InterruptDamage(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,a12,a15)
+	elseif eventType == "SPELL_HEAL" or eventType == "SPELL_PERIODIC_HEAL" and eventType ~= "SPELL_ABSORBED" then--治疗
+		local amount = select(15,CombatLogGetCurrentEventInfo()) - select(16,CombatLogGetCurrentEventInfo())
+		amount = floor(amount + .5)
+		if amount < 1 then
+		    -- stop on complete overheal or out of combat; heals will never start a new fight
+		    return
+		end
+		MVPFrame:SpellHeal(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,amount)
+		
 
 
 	end
