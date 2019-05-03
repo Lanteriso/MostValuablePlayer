@@ -1,0 +1,6 @@
+## Interface: 80000
+## Title: MostValuablePlayer最有价值玩家
+## Version: 0.0.1
+## Notes: MostValuablePlayer最有价值玩家
+## SavedVariables: MVPDB
+MostValuablePlayer.lua
