@@ -2,5 +2,5 @@
 ## Title: MostValuablePlayer最有价值玩家
 ## Version: 0.0.1
 ## Notes: MostValuablePlayer最有价值玩家
-## SavedVariables: MVPDB
+## SavedVariables: MVPDB,MVPLists
 MostValuablePlayer.lua

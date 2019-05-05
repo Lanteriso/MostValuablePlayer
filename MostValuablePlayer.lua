@@ -10,7 +10,14 @@ local HealData = {} -- 治疗
 local activeUser = nil
 local playerUser = GetUnitName("player",true).."-"..GetRealmName():gsub(" ", "")
 local hardMinPct = 20
+local select,UnitGUID,tonumber
+    = select, UnitGUID, tonumber--鼠标提示相关
 
+local kinds = {
+  spell = "SpellID",
+  item = "ItemID",
+  unit = "NPCID",
+}
 
 local Spells = {
 	-- Debug
@@ -191,6 +198,8 @@ function round(number, decimals)
     return (("%%.%df"):format(decimals)):format(number)
 end
 
+
+
 local MVPFrame = CreateFrame("Frame", "MVPFrame")
 MVPFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 local MSG_PREFIX = "MostValuablePlayer"
@@ -264,6 +273,38 @@ function generateMaybeOutput(user)
 		end
 	return func
 end
+----------------------鼠标提示相关------------------
+local function addLine(tooltip, id, kind,guname)
+  if not id or id == "" then return end
+  if type(id) == "table" and #id == 1 then id = id[1] end
+
+  -- 检查我们是否已添加到此工具提示中。发生在人才框架上
+  local frame, text
+  for i = 1,15 do
+    frame = _G[tooltip:GetName() .. "TextLeft" .. i]
+    if frame then text = frame:GetText() end
+    if text and string.find(text, kind .. ":") then return end
+  end
+
+  if MVPLists[guname] then
+	  tooltip:AddDoubleLine(MVPLists[guname])
+	  tooltip:Show()
+	end
+end
+-- NPCs
+GameTooltip:HookScript("OnTooltipSetUnit", function(self)
+  if C_PetBattles.IsInBattle() then return end
+  local unit = select(2, self:GetUnit())
+  if unit then
+    local guid = UnitGUID(unit) or ""
+    local guna = UnitName(unit) or ""
+    local id = tonumber(guid:match("-(%d+)-%x+$"), 10)
+    if id and guid:match("%a+") ~= "abc" then 
+      addLine(GameTooltip, id, kinds.unit,guna)
+    end
+  end
+end)
+----------------------鼠标提示相关------------------
 
 SLASH_ELITISMHELPER1 = "/eh"
 
@@ -346,6 +387,9 @@ function MVPFrame:ADDON_LOADED(event,addon)
 	if not MVPDB then
 		MVPDB = true
 	end
+	if MVPLists == nil then MVPLists = {} end
+	if MVPLists["测试"] == nil then MVPLists["测试"] ="测试成功" end
+	if MVPLists["Janyroo"] == nil then MVPLists["Janyroo"] ="Janyroo测试    5伤害     2额外受伤       3治疗     6打断      7阵亡      9评分" end
 end
 
 function MVPFrame:GROUP_ROSTER_UPDATE(event,...)
@@ -410,6 +454,7 @@ function MVPFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 		if not score[k] then score[k] = 0 end
 		
 		score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000 ,1)+InterruptData[k]-DeathData[k]*3
+		MVPLists[k]=round(v / 10000 ,1).." 万--"..round(CombinedFails[k] / 10000 ,1).." 万--"..round(HealData[k] / 10000 ,1).." 万--"..InterruptData[k].." 断--"..DeathData[k].." 亡--"..score[k].." 分"
 		SendChatMessage(k..round(v / 10000 ,1).." 万--"..round(CombinedFails[k] / 10000 ,1).." 万--"..round(HealData[k] / 10000 ,1).." 万--"..InterruptData[k].." 断--"..DeathData[k].." 亡--"..score[k].." 分","PARTY") --总伤害量 额外受伤 死亡次数  打断次数
 		--print("【sovijo】说：","伤害-额外受伤-打断-死亡-评分-MVP",round((30000000 - 2000000 * 3) / 100000 ,1) + 30 - 5*3)
 	end
