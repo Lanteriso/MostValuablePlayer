@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="OILVL_RAID_PROGRESSION" header="OiLvL" category="ADDONS">
+		OMouseover2()
+	</Binding>
+</Bindings>

@@ -1,3 +1,5 @@
+local cfg;
+
 local Users = {}
 local Timers = {}
 local TimerData = {}
@@ -5,134 +7,178 @@ local CombinedFails = {} -- 额外受伤
 local DeathData = {}--JANY用来记录一次副本里的死亡次数
 local DamdgeData = {}--JANY用来记录一次副本里的总伤害量
 local InterruptData = {}--打断次数
+local DispelData = {}--驱散
 local score = {}--评分
+local Battletime= {}--战斗时长
 local HealData = {} -- 治疗
+local deftime = {}
 local activeUser = nil
 local playerUser = GetUnitName("player",true).."-"..GetRealmName():gsub(" ", "")
 local hardMinPct = 20
+
 local select,UnitGUID,tonumber
     = select, UnitGUID, tonumber--鼠标提示相关
+local challengeMapID
 
-local kinds = {
-  spell = "SpellID",
-  item = "ItemID",
-  unit = "NPCID",
+local tonumber, band = tonumber, bit.band
+local isValidEvent = {
+  SWING_DAMAGE = true,
+  SWING_MISSED = true,
+  RANGE_DAMAGE = true,
+  RANGE_MISSED = true,
+  SPELL_ABSORBED = true,
+  SPELL_DAMAGE = true,
+  SPELL_HEAL = true,
+  SPELL_MISSED = true,
+  SPELL_SUMMON = true,
+  SPELL_PERIODIC_DAMAGE = true,
+  SPELL_PERIODIC_HEAL = true,
+  SPELL_PERIODIC_MISSED = true,
+  SPELL_EXTRA_ATTACKS = true,
+  DAMAGE_SHIELD = true,
+  DAMAGE_SHIELD_MISSED = true,
+  DAMAGE_SPLIT = true,
 }
-
+local isHeal = {
+  SPELL_ABSORBED = true,
+  SPELL_HEAL = true,
+  SPELL_PERIODIC_HEAL = true,
+}
+local isDamage = {
+  SWING_DAMAGE = true,
+  RANGE_DAMAGE = true,
+  SPELL_DAMAGE = true,
+  SPELL_PERIODIC_DAMAGE = true,
+  DAMAGE_SHIELD = true,
+  DAMAGE_SPLIT = true,
+}
 local Spells = {
-	-- Debug
-	--[252144] = 1,
-	--[252150] = 1,
-	[260320] = 20,
 	-- Affixes
-	[209862] = 20,		-- Volcanic Plume (Environment)
-	[226512] = 20,		-- Sanguine Ichor (Environment)
+	[209862] = 20,    -- Volcanic Plume (Environment)
+	[226512] = 20,    -- Sanguine Ichor (Environment)
+	[288694] = 20,    -- Shadow Smash (Season 2)
+	[288858] = 20,    -- Expel Soul (Season 2)
 
 	-- Freehold
-	[272046] = 20,		--- Dive Bomb (Sharkbait)
-	[257426] = 20,		--- Brutal Backhand (Irontide Enforcer)
-	[258352] = 20,		--- Grapeshot (Captain Eudora)
-	[272374] = 20,		--- Whirlpool of Blades
-	[256546] = 20,		--- Shark Tornado
-	[257310] = 20,		--- Cannon Barrage
-	[257902] = 20,		--- Shell Bounce (Ludwig Von Tortollan)
-	[258199] = 20,		--- Ground Shatter (Irontide Crusher)
-	[276061] = 20,		--- Boulder Throw (Irontide Crusher)
-	[258779] = 20,		--- Sea Spout (Irontide Oarsman)
-	[274400] = 20,		--- Duelist Dash (Cutwater Duelist)
-	[257274] = 20,		--- Vile Coating (Environment)
-	
+	[272046] = 20,    --- Dive Bomb (Sharkbait)
+	[257426] = 20,    --- Brutal Backhand (Irontide Enforcer)
+	[258352] = 20,    --- Grapeshot (Captain Eudora)
+	[256594] = 20,    --- Barrel Smash (Captain Raoul)
+	[267523] = 20,    --- Cutting Surge (Captain Jolly)
+	[272374] = 20,    --- Whirlpool of Blades (Captain Jolly)
+	[272397] = 20,    --- Whirlpool of Blades (Captain Jolly)
+	[256546] = 20,    --- Shark Tornado
+	[257310] = 20,    --- Cannon Barrage
+	[257757] = 20,    --- Goin' Bananas (Bilge Rat Buccaneer)
+	[274389] = 20,    --- Rat Traps (Vermin Trapper)
+	[257902] = 20,    --- Shell Bounce (Ludwig Von Tortollan)
+	[258199] = 20,    --- Ground Shatter (Irontide Crusher)
+	[276061] = 20,    --- Boulder Throw (Irontide Crusher)
+	[258779] = 20,    --- Sea Spout (Irontide Oarsman)
+	[274400] = 20,    --- Duelist Dash (Cutwater Duelist)
+	[257274] = 20,    --- Vile Coating (Environment)
+
 	-- Shrine of the Storm
-	[264560] = 20,		--- Choking Brine (Aqualing)
-	[267899] = 20,		--- Hindering Cleave (Brother Ironhull)
-	[268280] = 20,		--- Tidal Pod (Tidesage Enforcer)
-	[276286] = 20,		--- Slicing Hurricane (Environment)
-	[276292] = 20,		--- Whirlign Slam (Ironhull Apprentice)
-	[269104] = 20,		--- Explosive Void (Lord Stormsong)
-	[267385] = 20,		--- Tentacle Slam (Vol'zith the Whisperer)
-	
+	[264560] = 20,    --- Choking Brine (Aqualing)
+	[267899] = 20,    --- Hindering Cleave (Brother Ironhull)
+	[268280] = 20,    --- Tidal Pod (Tidesage Enforcer)
+	[276286] = 20,    --- Slicing Hurricane (Environment)
+	[276292] = 20,    --- Whirlign Slam (Ironhull Apprentice)
+	[267385] = 20,    --- Tentacle Slam (Vol'zith the Whisperer)
+
 	-- Siege of Boralus
-	[256663] = 20,		--- Burning Tar (Blacktar Bomber)
-	[275775] = 20,		--- Savage Tempest (Irontide Raider)
-	[272426] = 20,		--- Sighted Artillery
-	[272140] = 20,		--- Iron Volley
-	[273681] = 20,		--- Heavy Hitter (Chopper Redhook)
-	
-	
+	[256627] = 20,    --- Slobber Knocker (Scrimshaw Enforcer)
+	[256663] = 20,    --- Burning Tar (Blacktar Bomber)
+	[257431] = 20,    --- Meat Hook (Chopper Redhook)
+	[275775] = 20,    --- Savage Tempest (Irontide Raider)
+	[269029] = 20,    --- Clear the Deck (Dread Captain Lockwood)
+	[272874] = 20,    --- Trample (Ashvane Commander)
+	[272426] = 20,    --- Sighted Artillery
+	[272140] = 20,    --- Iron Volley
+	[257292] = 20,    --- Heavy Slash (Irontide Cleaver)
+	[273681] = 20,    --- Heavy Hitter (Chopper Redhook)
+	[257886] = 20,    --- Brine Pool (Hadal Darkfathom)
+
 	-- Tol Dagor
-	[257785] = 20,		--- Flashing Daggers
-	[256976] = 20,		--- Ignition (Knight Captain Valyri)
-	[256955] = 20,		--- Cinderflame (Knight Captain Valyri)
-	[256083] = 20,		--- Cross Ignition (Overseer Korgus)
-	[263345] = 20,		--- Massive Blast (Overseer Korgus)
-	[258864] = 20,		--- Suppression Fire (Ashvane Marine/Spotter)
-	[258364] = 20,		--- Fuselighter (Ashvane Flamecaster)
-	[259711] = 20,		--- Lockdown (Ashvane Warden)
-	
+	[257785] = 20,    --- Flashing Daggers
+	[256976] = 20,    --- Ignition (Knight Captain Valyri)
+	[256955] = 20,    --- Cinderflame (Knight Captain Valyri)
+	[256083] = 20,    --- Cross Ignition (Overseer Korgus)
+	[263345] = 20,    --- Massive Blast (Overseer Korgus)
+	[258864] = 20,    --- Suppression Fire (Ashvane Marine/Spotter)
+	[258364] = 20,    --- Fuselighter (Ashvane Flamecaster)
+	[259711] = 20,    --- Lockdown (Ashvane Warden)
+
 	-- Waycrest Manor
-	[260569] = 20,		--- Wildfire (Soulbound Goliath)
-	[265407] = 20,		--- Dinner Bell (Banquet Steward)
-	[264923] = 20,		--- Tenderize (Raal the Gluttonous)
-	[264150] = 20,		--- Shatter (Thornguard)
-	[271174] = 20,		--- Retch (Pallid Gorger)
-	[268387] = 20,		--- Contagious Remnants (Lord Waycrest)
-	[268308] = 20,		--- Discordant Cadenza (Lady Waycrest
+	[260569] = 20,    --- Wildfire (Soulbound Goliath)
+	[265407] = 20,    --- Dinner Bell (Banquet Steward)
+	[264923] = 20,    --- Tenderize (Raal the Gluttonous)
+	[264150] = 20,    --- Shatter (Thornguard)
+	[271174] = 20,    --- Retch (Pallid Gorger)
+	[268387] = 20,    --- Contagious Remnants (Lord Waycrest)
+	[268308] = 20,    --- Discordant Cadenza (Lady Waycrest
 
 	-- Atal'Dazar
-	[253666] = 20,		--- Fiery Bolt (Dazar'ai Juggernaught)
-	[257692] = 20,		--- Tiki Blaze (Environment)
-	[255620] = 20,		--- Festering Eruption (Reanimated Honor Guard)
-	[256959] = 20,		--- Rotting Decay (Renaimated Honor Guard)
-	[250259] = 20,		--- Toxic Leap
-	[250022] = 20,		--- Echoes of Shadra (Echoes of Shadra)
-	[250585] = 20, 		--- Toxic Pool
-	[250036] = 20,		--- Shadowy Remains
+	[253666] = 20,    --- Fiery Bolt (Dazar'ai Juggernaught)
+	[257692] = 20,    --- Tiki Blaze (Environment)
+	[255620] = 20,    --- Festering Eruption (Reanimated Honor Guard)
+	[256959] = 20,    --- Rotting Decay (Renaimated Honor Guard)
+	[250259] = 20,    --- Toxic Leap
+	[250022] = 20,    --- Echoes of Shadra (Echoes of Shadra)
+	[250585] = 20,    --- Toxic Pool
+	[250036] = 20,    --- Shadowy Remains
 
 	-- King's Rest
-	[265914] = 20,		--- Molten Gold (The Golden Serpent)
-	[266191] = 20,		--- Whirling Axe (Council of Tribes)
-	[270289] = 20,		--- Purification Beam
-	[270503] = 20,		--- Hunting Leap (Honored Raptor)
-	[271564] = 20,		--- Embalming Fluid (Embalming Fluid)
-	[270485] = 20,		--- Blooded Leap (Spectral Berserker)
-	[267639] = 20,		--- Burn Corruption (Mchimba the Embalmer)
-	[270931] = 20,		-- Darkshot
-	
+	[265914] = 20,    --- Molten Gold (The Golden Serpent)
+	[266191] = 20,    --- Whirling Axe (Council of Tribes)
+	[270289] = 20,    --- Purification Beam
+	[270503] = 20,    --- Hunting Leap (Honored Raptor)
+	[271564] = 20,    --- Embalming Fluid (Embalming Fluid)
+	[270485] = 20,    --- Blooded Leap (Spectral Berserker)
+	[267639] = 20,    --- Burn Corruption (Mchimba the Embalmer)
+	[270931] = 20,    --- Darkshot
+
 	-- The MOTHERLODE!!
-	[257371] = 20,		--- Gas Can (Mechanized Peace Keeper)
-	[262287] = 20,		-- Concussion Charge (Mech Jockey / Venture Co. Skyscorcher)
-	[268365] = 20,		--- Mining Charge (Wanton Sapper)
-	[269313] = 20,		--- Final Blast (Wanton Sapper)
-	[275907] = 20,		--- Tectonic Smash
-	[259533] = 20,		--- Azerite Catalyst (Rixxa Fluxflame)
-	[260103] = 20,		--- Propellant Blast
-	[260279] = 20,		--- Gattling Gun (Mogul Razdunk)
-	[276234] = 20, 		--- Micro Missiles
-	[270277] = 20,		--- Big Red Rocket (Mogul Razdunk)
-	[271432] = 20,		--- Test Missile (Venture Co. War Machine)
-	[262348] = 20,		--- Mine Blast
-	[257337] = 20,		--- Shocking Claw
-	[269092] = 20,		--- Artillery Barrage (Ordnance Specialist)
+	[257371] = 20,    --- Gas Can (Mechanized Peace Keeper)
+	[262287] = 20,    --- Concussion Charge (Mech Jockey / Venture Co. Skyscorcher)
+	[268365] = 20,    --- Mining Charge (Wanton Sapper)
+	[269313] = 20,    --- Final Blast (Wanton Sapper)
+	[275907] = 20,    --- Tectonic Smash
+	[259533] = 20,    --- Azerite Catalyst (Rixxa Fluxflame)
+	[260103] = 20,    --- Propellant Blast
+	[260279] = 20,    --- Gattling Gun (Mogul Razdunk)
+	[276234] = 20,    --- Micro Missiles
+	[270277] = 20,    --- Big Red Rocket (Mogul Razdunk)
+	[271432] = 20,    --- Test Missile (Venture Co. War Machine)
+	[262348] = 20,    --- Mine Blast
+	[257337] = 20,    --- Shocking Claw
+	[269092] = 20,    --- Artillery Barrage (Ordnance Specialist)
 
 	-- Temple of Sethraliss
-	[273225] = 20,		--- Volley (Sandswept Marksman)
-	[273995] = 20,		--- Pyrrhic Blast (Crazed Incubator)
-	[264206] = 20,		--- Burrow (Merektha)
-	[272657] = 20,		--- Noxious Breath
-	
+	[268851] = 20,    --- Lightning Shield (Adderis)
+	[273225] = 20,    --- Volley (Sandswept Marksman)
+	[264574] = 20,    --- Power Shot (Sandswept Marksman)
+	[273995] = 20,    --- Pyrrhic Blast (Crazed Incubator)
+	[264206] = 20,    --- Burrow (Merektha)
+	[272657] = 20,    --- Noxious Breath
+	[272658] = 20,    --- Electrified Scales
+	[272821] = 20,    --- Call Lightning (Stormcaller)
 
 	-- Underrot
-	[265542] = 20,		--- Rotten Bile (Fetid Maggot)
-	[265019] = 20,		--- Savage Cleave (Chosen Blood Matron)
-	[261498] = 20,		--- Creeping Rot (Elder Leaxa)
-	[265665] = 20,		--- Foul Sludge (Living Rot)
+	[264757] = 20,    --- Sanguine Feast (Elder Leaxa)
+	[265542] = 20,    --- Rotten Bile (Fetid Maggot)
+	[265019] = 20,    --- Savage Cleave (Chosen Blood Matron)
+	[261498] = 20,    --- Creeping Rot (Elder Leaxa)
+	[265665] = 20,    --- Foul Sludge (Living Rot)
+	[265511] = 20,    --- Spirit Drain (Spirit Drain Totem)
+	[272469] = 20,    --- Abyssal Slam (Abyssal Reach)
+	[272609] = 20,    --- Maddening Gaze (Faceless Corruptor)
 }
-
 local SpellsNoTank = {
 	-- Freehold
 
 	-- Shrine of the Storm
-	[267899] = 20,  		--- Hindering Cleave
+	[267899] = 20,      --- Hindering Cleave
 
 	-- Siege of Boralus
 
@@ -147,47 +193,46 @@ local SpellsNoTank = {
 	-- The MOTHERLODE!!
 
 	-- Temple of Sethraliss
-	[255741] = 20,			--- Cleave (Scaled Krolusk Rider)
+	[255741] = 20,    	--- Cleave (Scaled Krolusk Rider)
 
 	-- Underrot
-	[265019] = 20,			--- Savage Cleave (Chosen Blood Matron)
+	[265019] = 20,    	--- Savage Cleave (Chosen Blood Matron)
 }
-
 local Auras = {
 	-- Freehold
-	[274389] = true,		-- Rat Traps (Vermin Trapper)
-	[274516] = true,		-- Slippery Suds
-	
+	[274516] = true,    -- Slippery Suds
+	[274389] = true,        -- Rat Traps (Vermin Trapper)
+
 	-- Shrine of the Storm
-	[268391] = true,		-- Mental Assault (Abyssal Cultist)
-	[276268] = true,		-- Heaving Blow (Shrine Templar)
+	[268391] = true,    -- Mental Assault (Abyssal Cultist)
+	[276268] = true,    -- Heaving Blow (Shrine Templar)
 
 	-- Siege of Boralus
-	[257292] = true,		-- Heavy Slash (Kul Tiran Vanguard)
-	[272874] = true,		-- Trample (Ashvane Commander)
+	[257292] = true,    -- Heavy Slash (Kul Tiran Vanguard)
+	[272874] = true,    -- Trample (Ashvane Commander)
 
 	-- Tol Dagor
-	[257119] = true,		-- Sand Trap (The Sand Queen)
-	[256474] = true,		-- Heartstopper Venom (Overseer Korgus)
+	[257119] = true,    -- Sand Trap (The Sand Queen)
+	[256474] = true,    -- Heartstopper Venom (Overseer Korgus)
 
 	-- Waycrest Manor
-	[265352] = true,		-- Toad Blight (Toad)
-	
+	[265352] = true,    -- Toad Blight (Toad)
+
 	-- Atal'Dazar
 
 	-- King's Rest
-	[270003] = true,		-- Suppression Slam (Animated Guardian)
-	[270931] = true,		-- Darkshot
-	[268796] = true,		-- (Kind Dazar)
+	[270003] = true,    -- Suppression Slam (Animated Guardian)
+	[270931] = true,    -- Darkshot
+	[268796] = true,    -- (Kind Dazar)
 
 	-- The MOTHERLODE!!
-	
+
 	-- Temple of Sethraliss
-	[263914] = true,		-- Blinding Sand (Merektha)
-	[269970] = true,		-- Blinding Sand (Merektha)
+	[263914] = true,    -- Blinding Sand (Merektha)
+	[269970] = true,    -- Blinding Sand (Merektha)
 
 	-- Underrot
-	[272609] = true,		-- Maddening Gaze (Faceless Corrupter)
+	[272609] = true,    -- Maddening Gaze (Faceless Corrupter)
 
 }
 
@@ -200,34 +245,37 @@ end
 
 
 
-local MVPFrame = CreateFrame("Frame", "MVPFrame")
-MVPFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-local MSG_PREFIX = "MostValuablePlayer"
-local success = C_ChatInfo.RegisterAddonMessagePrefix(MSG_PREFIX)
-MVPFrame:RegisterEvent("CHAT_MSG_ADDON")
-MVPFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
-MVPFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-MVPFrame:RegisterEvent("CHALLENGE_MODE_START")
-MVPFrame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
-MVPFrame:RegisterEvent("ADDON_LOADED")
+local MVPvsFrame = CreateFrame("Frame", "MVPvsFrame")
+MVPvsFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
-MVPFrame:ClearAllPoints()
-MVPFrame:SetHeight(100)
-MVPFrame:SetWidth(100)
-MVPFrame.text = MVPFrame:CreateFontString(nil, "BACKGROUND", "PVPInfoTextFont")
-MVPFrame.text:SetAllPoints()
-MVPFrame.text:SetTextHeight(13)
-MVPFrame:SetAlpha(1)
+local MSG_PREFIX = "MVPvs"
+local success = C_ChatInfo.RegisterAddonMessagePrefix(MSG_PREFIX)
+MVPvsFrame:RegisterEvent("CHAT_MSG_ADDON")
+MVPvsFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+MVPvsFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+MVPvsFrame:RegisterEvent("CHALLENGE_MODE_START")
+MVPvsFrame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
+MVPvsFrame:RegisterEvent("ADDON_LOADED")
+
+MVPvsFrame:ClearAllPoints()
+MVPvsFrame:SetHeight(100)
+MVPvsFrame:SetWidth(100)
+MVPvsFrame.text = MVPvsFrame:CreateFontString(nil, "BACKGROUND", "PVPInfoTextFont")
+MVPvsFrame.text:SetAllPoints()
+MVPvsFrame.text:SetTextHeight(13)
+MVPvsFrame:SetAlpha(1)
 
 function table.pack(...)
   return { n = select("#", ...), ... }
 end
-
-MVPFrame:SetScript("OnEvent", function(self, event_name, ...)
+MVPvsFrame:SetScript("OnEvent", function(self, event_name, ...)
 	if self[event_name] then
 		return self[event_name](self, event_name, ...)
 	end
 end)
+
+
+
 
 function generateMaybeOutput(user)
 	local func = function()
@@ -247,32 +295,44 @@ function generateMaybeOutput(user)
 					minPct = spellMinPct
 				end
 				amount = amount + v
-				print("损失血量为 " .. amount)
+				--print("损失血量为 " .. amount)
 			end
 			if minPct == math.huge then
 				local spellNames = " "
 				for k,v in pairs(TimerData[user]) do
 					spellNames = spellNames..GetSpellLink(k).." "
 				end
-				print("<友情提示> Error: Could not find spells"..spellNames.."in Spells or SpellsNoTank but got Timer for them. wtf")
+				--print("<友情提示> Error: Could not find spells"..spellNames.."in Spells or SpellsNoTank but got Timer for them. wtf")
 			end
 			TimerData[user] = nil
 			Timers[user] = nil
 			local userMaxHealth = UnitHealthMax(user)
 			local msgAmount = round(amount/10000 ,1)
 			local pct = Round(amount / userMaxHealth * 100)
-			print(user,msg,amount)
+			--print(user,msg,amount)
 			msg = msg.."命中,减 "..msgAmount.."万血 (-"..pct.."%)."
-			print(msg)
+			--print(msg)
 
-			if pct >= hardMinPct and pct >= minPct and MVPDB then--这个判断未知
-				msg = msg.."损失血量为 "..msgAmount.."万 (-"..pct.."%)."
-				maybeSendChatMessage(msg)
-				print(msg)
+			if pct >= hardMinPct and pct >= minPct and MVPDB then--这个判断
+				--msg = msg.."损失血量为 "..msgAmount.."万 (-"..pct.."%)."
+				--print(msg)
 			end
 		end
 	return func
 end
+
+local function UnitFullName(unit)
+    if not unit then return UNKNOWNOBJECT end
+    local name, realm = UnitName(unit)
+    if not realm or realm=="" then
+        if not PLAYER_REALM or PLAYER_REALM=="" then
+            PLAYER_REALM = GetRealmName()
+        end
+        realm = PLAYER_REALM
+    end
+    return name.."-"..realm
+end
+
 ----------------------鼠标提示相关------------------
 local function addLine(tooltip, id, kind,guname)
   if not id or id == "" then return end
@@ -286,8 +346,10 @@ local function addLine(tooltip, id, kind,guname)
     if text and string.find(text, kind .. ":") then return end
   end
 
-  if MVPLists[guname] then
-	  tooltip:AddDoubleLine(MVPLists[guname])
+  if MVPLilst[guname] then
+
+
+	  tooltip:AddDoubleLine(MVPLilst[guname])
 	  tooltip:Show()
 	end
 end
@@ -298,24 +360,26 @@ GameTooltip:HookScript("OnTooltipSetUnit", function(self)
   if unit then
     local guid = UnitGUID(unit) or ""
     local guna = UnitName(unit) or ""
+    local guplayerUser = GetUnitName(unit,true)
+
     local id = tonumber(guid:match("-(%d+)-%x+$"), 10)
     if id and guid:match("%a+") ~= "abc" then 
-      addLine(GameTooltip, id, kinds.unit,guna)
+      addLine(GameTooltip, id, "ID",guplayerUser)
     end
   end
 end)
 ----------------------鼠标提示相关------------------
+--[[
+SLASH_MostValuablePlayers1 = "/MostValuablePlayers"
 
-SLASH_ELITISMHELPER1 = "/eh"
-
-SlashCmdList["MostValuablePlayer"] = function(msg,editBox)
+SlashCmdList["MostValuablePlayers"] = function(msg,editBox)
 	if msg == "activeuser" then
 		if activeUser == playerUser then
 			print("You are the activeUser")
 		end
 		
 	elseif msg == "resync" then
-		MVPFrame:RebuildTable()
+		MVPvsFrame:RebuildTable()
 		
 	elseif msg == "table" then
 		for k,v in pairs(Users) do
@@ -323,26 +387,26 @@ SlashCmdList["MostValuablePlayer"] = function(msg,editBox)
 		end
 		
 	elseif msg == "eod" then
-		MVPFrame:CHALLENGE_MODE_COMPLETED()
+		MVPvsFrame:CHALLENGE_MODE_COMPLETED()
 		
 	elseif msg == "on" or msg == "enable" then
 		if MVPDB then
-			print("ElitismHelper: Damage notifications are already enabled.")
+			print("Damage notifications are already enabled.")
 		else
 			MVPDB = true
-			print("ElitismHelper: All damage notifications enabled.")
+			print("All damage notifications enabled.")
 		end
 		
 	elseif msg == "off" or msg == "disable" then
 		if not MVPDB then
-			print("ElitismHelper: Damage notifications are already disabled.")
+			print("Damage notifications are already disabled.")
 		else
 			MVPDB = false
-			print("ElitismHelper: Will only announce at the end of the dungeon.")
+			print("Will only announce at the end of the dungeon.")
 		end
 	end
 end
-
+]]
 function maybeSendAddonMessage(prefix, message)
 	if IsInGroup() and not IsInGroup(2) and not IsInRaid() then
 		C_ChatInfo.SendAddonMessage(prefix,message,"PARTY")
@@ -350,7 +414,13 @@ function maybeSendAddonMessage(prefix, message)
 		C_ChatInfo.SendAddonMessage(prefix,message,"RAID")
 	end
 end
-
+function MVPprint(messages)
+	if cfg.MVPvsnoti == true then
+		SendChatMessage(messages,"PARTY")
+	else
+		print(messages)
+	end
+end
 function maybeSendChatMessage(message)
 	if activeUser ~= playerUser then
 		return
@@ -367,7 +437,7 @@ function maybeSendChatMessage(message)
 	end
 end
 
-function MVPFrame:RebuildTable()
+function MVPvsFrame:RebuildTable()--权重
 	Users = {}
 	activeUser = nil
 	if IsInGroup() then
@@ -379,25 +449,28 @@ function MVPFrame:RebuildTable()
 	end
 end
 
-function MVPFrame:ADDON_LOADED(event,addon)
+function MVPvsFrame:ADDON_LOADED(event,addon)
+
 	if addon == "MostValuablePlayer" then
-		MVPFrame:RebuildTable()
+		MVPvsFrame:RebuildTable()
 	end
-	
+
 	if not MVPDB then
 		MVPDB = true
 	end
-	if MVPLists == nil then MVPLists = {} end
-	if MVPLists["测试"] == nil then MVPLists["测试"] ="测试成功" end
-	if MVPLists["Janyroo"] == nil then MVPLists["Janyroo"] ="Janyroo测试    5伤害     2额外受伤       3治疗     6打断      7阵亡      9评分" end
+	if not MVPLilst then MVPLilst = {} end
+	cfg = MVP_Settings;
+	if cfg.MVPvsnoti == nil then cfg.MVPvsnoti = true; end
+
+
 end
 
-function MVPFrame:GROUP_ROSTER_UPDATE(event,...)
-	MVPFrame:RebuildTable()
+function MVPvsFrame:GROUP_ROSTER_UPDATE(event,...)
+	MVPvsFrame:RebuildTable()
 end
 
-function MVPFrame:ZONE_CHANGED_NEW_AREA(event,...)
-	MVPFrame:RebuildTable()
+function MVPvsFrame:ZONE_CHANGED_NEW_AREA(event,...)
+	MVPvsFrame:RebuildTable()
 end
 
 function compareDamage(a,b)
@@ -406,7 +479,32 @@ end
 function compareMVP(a,b)
 	return a["value"] > b["value"]
 end
-function MVPFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
+local function timeFormatMS(timeAmount)
+	local seconds = floor(timeAmount / 1000)
+	local ms = timeAmount - seconds * 1000
+	local hours = floor(seconds / 3600)
+	local minutes = floor((seconds / 60) - (hours * 60))
+	seconds = seconds - hours * 3600 - minutes * 60
+
+	if hours == 0 then
+		return format("%d:%.2d.%.3d", minutes, seconds, ms)--分 秒
+	else
+		return format("%d:%.2d:%.2d.%.3d", hours, minutes, seconds, ms)
+	end
+end
+local function timeFormats(timeAmount)
+	local seconds = floor(timeAmount / 1000)
+	local hours = floor(seconds / 3600)
+	local minutes = floor((seconds / 60) - (hours * 60))
+	seconds = seconds - hours * 3600 - minutes * 60
+
+	if hours == 0 then
+		return minutes
+	else
+		return hours * 60 + minutes
+	end
+end
+function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 	--[[
 	C_ChallengeMode.GetActiveChallengeMapID()
 	C_ChallengeMode.GetActiveKeystoneInfo()
@@ -428,15 +526,15 @@ function MVPFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 	name, id, timeLimit, texture, backgroundTexture = C_ChallengeMode.GetMapUIInfo(mapChallengeModeID)
 	damageMod, healthMod = C_ChallengeMode.GetPowerLevelDamageHealthMod(powerLevel)
 	mapChallengeModeID, affixIDs, keystoneLevel = C_ChallengeMode.GetSlottedKeystoneInfo()
-	
+
 	local activeKeystoneLevel, activeAffixIDs, wasActiveKeystoneCharged = C_ChallengeMode.GetActiveKeystoneInfo()
-	print("1 ",activeKeystoneLevel, activeAffixIDs, wasActiveKeystoneCharged )
+	print("1 ",activeKeystoneLevel, activeAffixIDs, wasActiveKeystoneCharged )--7  table  true
 	local mapChallengeModeID, level, time, onTime, keystoneUpgradeLevels = C_ChallengeMode.GetCompletionInfo()
-	print("2 ",mapChallengeModeID, level, time, onTime, keystoneUpgradeLevels)--地图ID 钥匙等级 用时 是否限时 +几
+	print("2 ",mapChallengeModeID, level, time, onTime, keystoneUpgradeLevels)--地图ID 钥匙等级 用时 是否限时 +几     1864  7  2393669 true  1
 	local mapChallengeModeID = C_ChallengeMode.GetActiveChallengeMapID()
 	print("3 ",mapChallengeModeID)
 	local numDeaths, timeLost = C_ChallengeMode.GetDeathCount()
-	print("4 ",numDeaths, timeLost)
+	print("4 ",numDeaths, timeLost)--  10死  50 秒
 	local topAttempt = C_ChallengeMode.GetGuildLeaders()
 	print("5 ",topAttempt)
 	local mapChallengeModeIDs = C_ChallengeMode.GetMapTable()
@@ -444,41 +542,89 @@ function MVPFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 	local mapChallengeModeID, affixIDs, keystoneLevel = C_ChallengeMode.GetSlottedKeystoneInfo()
 	print("7 ",mapChallengeModeID, affixIDs, keystoneLevel)
 	]]
-	SendChatMessage("玩家         伤害           额外受伤        治疗     打断      阵亡      评分","PARTY")
+
+	local TIME_FOR_3 = 0.6
+	local TIME_FOR_2 = 0.8
+	--keystoneWasCompleted = true
+	
+	if not challengeMapID then print("challengeMapID") end
+
+	local mapID, level, time, onTime, keystoneUpgradeLevels = C_ChallengeMode.GetCompletionInfo()
+	local name, _, timeLimit = C_ChallengeMode.GetMapUIInfo(challengeMapID)
+
+	timeLimit = timeLimit * 1000
+	local timeLimit2 = timeLimit * TIME_FOR_2
+	local timeLimit3 = timeLimit * TIME_FOR_3
+	local RemainingTime
+	print("CHALLENGE_MODE_COMPLETED",mapID, level, time, onTime, keystoneUpgradeLevels,name, timeLimit,timeLimit2,timeLimit3)
+	if time <= timeLimit3 then
+		print( format("|cff33ff99<%s>|r |cffffd700%s|r", "MVP", format("恭喜你在规定时间内获得了 %s 的3箱奖励！共耗时 %s，3箱奖励剩余时间 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit3 - time))) )
+		RemainingTime=timeFormats(timeLimit3 - time)
+	elseif time <= timeLimit2 then
+		print( format("|cff33ff99<%s>|r |cffc7c7cf%s|r", "MVP", format("恭喜你在规定时间内获得了 %s 的2箱奖励！共耗时 %s，2箱奖励剩余时间 %s，3箱奖励超时 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit2 - time), timeFormatMS(time - timeLimit3))) )
+		RemainingTime=timeFormats(timeLimit2 - time)
+	elseif onTime then
+		print( format("|cff33ff99<%s>|r |cffeda55f%s|r", "MVP", format("恭喜你在规定时间内完成了 %s 的战斗！共耗时 %s，剩余时间 %s，2箱奖励超时 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit - time), timeFormatMS(time - timeLimit2))) )
+		RemainingTime=timeFormats(timeLimit - time)
+	else
+		print( format("|cff33ff99<%s>|r |cffff2020%s|r", "MVP", format("很遗憾你超时完成了 %s 的战斗。共耗时 %s，超出规定时间 %s。", name, timeFormatMS(time), timeFormatMS(time - timeLimit))) )
+		RemainingTime=timeFormats(time - timeLimit)*-1
+	end
+
+	MVPprint(name..level.."层    玩家         伤害           额外受伤        治疗     打断   驱散   阵亡      评分")
+	
+	local allscore = 0
 	for k, v in pairs(DamdgeData) do 
 		if not v then v=0 end
 		if not CombinedFails[k] then CombinedFails[k] = 0 end
 		if not InterruptData[k] then InterruptData[k] = 0 end
+		if not DispelData[k] then DispelData[k] = 0 end
 		if not DeathData[k] then DeathData[k] = 0 end
 		if not HealData[k] then HealData[k] = 0 end
 		if not score[k] then score[k] = 0 end
-		
-		score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000 ,1)+InterruptData[k]-DeathData[k]*3
-		MVPLists[k]=round(v / 10000 ,1).." 万--"..round(CombinedFails[k] / 10000 ,1).." 万--"..round(HealData[k] / 10000 ,1).." 万--"..InterruptData[k].." 断--"..DeathData[k].." 亡--"..score[k].." 分"
-		SendChatMessage(k..round(v / 10000 ,1).." 万--"..round(CombinedFails[k] / 10000 ,1).." 万--"..round(HealData[k] / 10000 ,1).." 万--"..InterruptData[k].." 断--"..DeathData[k].." 亡--"..score[k].." 分","PARTY") --总伤害量 额外受伤 死亡次数  打断次数
-		--print("【sovijo】说：","伤害-额外受伤-打断-死亡-评分-MVP",round((30000000 - 2000000 * 3) / 100000 ,1) + 30 - 5*3)
+		score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000 ,1)+InterruptData[k]+DispelData[k]-DeathData[k]*3+(level+keystoneUpgradeLevels)*10 + RemainingTime
+		allscore = allscore + score[k]
+	end
+
+
+	for k, v in pairs(DamdgeData) do 
+		if not v then v=0 end
+		if not CombinedFails[k] then CombinedFails[k] = 0 end
+		if not InterruptData[k] then InterruptData[k] = 0 end
+		if not DispelData[k] then DispelData[k] = 0 end
+		if not DeathData[k] then DeathData[k] = 0 end
+		if not HealData[k] then HealData[k] = 0 end
+		if not score[k] then score[k] = 0 end
+		--评分公式    (总伤害量 + 治疗 - 额外受伤 * 3) / 100000 + 打断 + 驱散 - 死亡 * 3 + (层数 + 几箱) *10 + 剩余时间  \n|r
+    print(v,"伤害--【这是测试数据】--时间",Battletime[k])
+		score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000 ,1)+InterruptData[k]+DispelData[k]-DeathData[k]*3+(level+keystoneUpgradeLevels)*10 + RemainingTime
+		MVPLilst[k]=name..level.."层 ".."【+"..keystoneUpgradeLevels.."】"..allscore.."团队得分 "..score[k].."个人分 "..(allscore/5).."平均分\n|r "..round((v/Battletime[k])/10000,2).."秒伤 "..round(v / 10000 ,1).."伤害 "..round(CombinedFails[k] / 10000 ,1).."受伤 "..round(HealData[k] / 10000 ,1).."疗 "..InterruptData[k].."断 "..DispelData[k].."驱 "..DeathData[k].."亡 "
+		MVPprint(k..round(v / 10000 ,1).."伤害 "..round(CombinedFails[k] / 10000 ,1).."受伤 "..round(HealData[k] / 10000 ,1).."疗 "..InterruptData[k].."断 "..DispelData[k].."驱 "..DeathData[k].."亡 "..score[k].."分") --总伤害量 额外受伤 死亡次数  打断次数
+		--print("【sovijo】说：","伤害-额外受伤-打断-死亡-评分-MVP",round((30000000 - 2000000 * 3) / 100000 ,1) + 30 - 5*3)      层数*10 + 限时箱 *10 + 剩余时间   (level+keystoneUpgradeLevels)*10 + RemainingTime
 	end
 	local fs = { }
 	for k, v in pairs(score) do table.insert(fs, { key = k, value = v }) end
 	table.sort(fs, compareMVP)
 	for k,v in pairs(fs) do
-		SendChatMessage("恭喜 "..v["key"].." "..v["value"].." 分   【MVP】","PARTY")
+
+		MVPprint("团队得分 "..allscore.."恭喜 "..v["key"].." "..v["value"].." 分   【MVP】")
 		break
+
 	end
 
 	local count = 0
 	for _ in pairs(CombinedFails) do count = count + 1 end
 	if count == 0 then
-		--maybeSendChatMessage("Thank you for travelling with ElitismHelper. No failure damage was taken this run.")
+		--maybeSendChatMessage(".")
 		return
 	else
-		print("--------------------:")
+		--print("--------------------:")
 		--maybeSendChatMessage("----------排行榜:")
 	end
 	local u = { }
 	for k, v in pairs(CombinedFails) do table.insert(u, { key = k, value = v }) end
 	table.sort(u, compareDamage)
-	for k,v in pairs(u) do
+	for k,v in pairs(u) do--额外伤害排行
 		--print(k..". "..v["key"].." "..round(v["value"] / 10000 ,1).." 万")
 			--maybeSendChatMessage(k..". "..v["key"].." "..round(v["value"] / 10000 ,1).." 万")
 	end
@@ -486,20 +632,28 @@ function MVPFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 	DeathData = {}--挑战模式完成时 重置死亡次数为nil  ----jany
 	DamdgeData = {}--挑战模式完成时 重置总伤害为nil---jany
 	InterruptData ={} --打断次数
+	DispelData ={} --驱散次数
 	HealData ={}--治疗
+	deftime={}
 	score={}--评分
+	Battletime= {}--战斗时长
+
 end
 
-function MVPFrame:CHALLENGE_MODE_START(event,...)--挑战模式启动 时重置伤害为nil,死亡次数为nil
+function MVPvsFrame:CHALLENGE_MODE_START(event,...)--挑战模式启动 时重置伤害为nil,死亡次数为nil
 	CombinedFails = {} -- 不躲技能受到的伤害
 	DeathData = {}--挑战模式启动时 重置伤害为nil,死亡次数为nil   ----jany
 	DamdgeData = {}--挑战模式启动时 重置总伤害为nil---jany
 	InterruptData ={}--打断次数
+	DispelData ={} --驱散次数
 	HealData ={}--治疗
+	deftime={}
 	score={}
+	Battletime= {}--战斗时长
+	challengeMapID = C_ChallengeMode.GetActiveChallengeMapID()
 end
 
-function MVPFrame:CHAT_MSG_ADDON(event,...)
+function MVPvsFrame:CHAT_MSG_ADDON(event,...)
 	local prefix, message, channel, sender = select(1,...)
 	if prefix ~= MSG_PREFIX then
 		return
@@ -517,7 +671,7 @@ function MVPFrame:CHAT_MSG_ADDON(event,...)
 			end
 		end
 	else
-		print("Unknown message: "..message)
+		--print("Unknown message: "..message)
 	end
 end
 
@@ -591,7 +745,7 @@ local function isPartyPet(petGUID)--判断是否是队伍里
   end
 end
 
-function MVPFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, aAmount)
+function MVPvsFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, aAmount)
 	--print("发生了攻击事件Spells[spellId]"..timestamp, eventType,srcName,aAmount)
 	if (Spells[spellId] or (SpellsNoTank[spellId] and UnitGroupRolesAssigned(dstName) ~= "TANK")) and UnitIsPlayer(dstName) then
 		-- Initialize TimerData and CombinedFails for Timer shot 为计时器快照初始化,
@@ -620,13 +774,13 @@ function MVPFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags, 
 		end--玩害受到伤害统计
 	end
 
-	if UnitIsPlayer(srcName) then--玩害技能伤害统计
+	if UnitIsPlayer(srcName) then--玩家技能伤害统计
 		if DamdgeData[srcName] == nil then
 			DamdgeData[srcName] = 0
 		end
 		DamdgeData[srcName] = DamdgeData[srcName] + aAmount	
 		--print(srcName,DamdgeData[srcName])
-
+    
 	
   	elseif isPartyPet(srcGUID) then--宠物是否是在队伍里的----宠物伤害统计
     -- get owner
@@ -639,14 +793,15 @@ function MVPFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags, 
 end
 
 --死亡事件JANY
-function MVPFrame:DeathDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool,destName)
+function MVPvsFrame:DeathDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool,destName)
 	if UnitIsPlayer(dstName) then--如果死亡的是队友和我   srcName是甲方    dstName是乙方     这是 怪物 击败了 玩家
 
 		if DeathData[dstName] == nil then
 			DeathData[dstName] = 0
 		end
-		DeathData[dstName] = DeathData[dstName] + 1
-		if destName then
+		
+		if destName and UnitHealth(dstName)==0 then--/run SendChatMessage((UnitHealth("卢瑟希"),"PARTY"))
+		DeathData[dstName] = DeathData[dstName] + 1--/run print(DeathData["卢瑟希"])
 		print(destName .. " 失去 " .. DeathData[dstName] .. " 血！")
 		else
 		print("发生了死亡事件")	
@@ -654,7 +809,7 @@ function MVPFrame:DeathDamage(timestamp, eventType, srcGUID, srcName, srcFlags, 
 	end
 end
 --打断事件JANY
-function MVPFrame:InterruptDamage(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,a12,a15)
+function MVPvsFrame:InterruptDamage(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,a12,a15)
 	local inInstance = IsInGroup(LE_PARTY_CATEGORY_INSTANCE)
 	local inParty = IsInGroup()--是否在小队
 	local inRaid = IsInRaid()
@@ -664,15 +819,30 @@ function MVPFrame:InterruptDamage(timestamp, eventType, hideCaster, srcGUID, src
 		end
 		InterruptData[srcName] = InterruptData[srcName] + 1
 		if srcName then
-		print(srcName .. " 打断 " .. InterruptData[srcName] .. " 次！")
-		--SendChatMessage(srcName .. " 打断 " .. InterruptData[srcName] .. " 次！人品+1","PARTY")
+		--print(srcName .. " 打断 " .. InterruptData[srcName] .. " 次！人品+1")
 		else
 		print("发生了打断事件")	
 		end
 	end
 end
+--驱散事件
+function MVPvsFrame:DISPELDamage(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2)
+	local inParty = IsInGroup()--是否在小队
+	if UnitIsPlayer(srcName) and inParty then
+		if DispelData[srcName] == nil then
+			DispelData[srcName] = 0
+		end
+		DispelData[srcName] = DispelData[srcName] + 1
+		if srcName then
+		--print(srcName .. " 驱散 " .. DispelData[srcName] .. " 次！人品+1")
+		else
+		print("发生了驱散事件")	
+		end
+
+	end
+end
 --发生治疗事件
-function MVPFrame:SpellHeal(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,amount)
+function MVPvsFrame:SpellHeal(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,amount)
 	if UnitIsPlayer(srcName) then
 		if HealData[srcName] == nil then
 			HealData[srcName] = 0
@@ -681,17 +851,57 @@ function MVPFrame:SpellHeal(timestamp, eventType, hideCaster, srcGUID, srcName, 
 	end	
 end
 
-function MVPFrame:SwingDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, aAmount)--玩害普通攻击伤害统计
+
+local amounts = 0
+function MVPvsFrame:Batime(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2)
+	
+    local inParty = IsInGroup()--是否在小队
+    if UnitIsPlayer(srcName) and inParty then
+	  -- add combat time增加战斗时间
+	  
+		if Battletime[srcName] == nil then
+
+			Battletime[srcName] = 0
+      
+		end
+		if deftime[srcName] == nil then
+
+			deftime[srcName] = 0
+      
+		end		
+		
+		amounts = timestamp - deftime[srcName]
+	  if amounts < 3.5 then
+	  	--SendChatMessage("加"..amounts,"PARTY")
+	    Battletime[srcName] = Battletime[srcName] + amounts
+	  --elseif amounts < 10 then
+	    --Battletime[srcName] = Battletime[srcName] + amounts
+	  else
+	  	--SendChatMessage("加"..amounts,"PARTY")
+	  	Battletime[srcName] = Battletime[srcName] + 3.5
+	  end
+	  --print(com.fight[1].t,com.fight[2].t)
+	  -- save timestamp 保存时间戳
+  	  deftime[srcName] = timestamp
+  	 --/run SendChatMessage(Battletime["卢瑟希"],"PARTY"))
+  	 --SendChatMessage(Battletime["卢瑟希"].."------"..DamdgeData["卢瑟希"].."------"..DamdgeData["卢瑟希"]/Battletime["卢瑟希"],"PARTY")
+    end
+
+end
+
+function MVPvsFrame:SwingDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, aAmount)--玩害普通攻击伤害统计
 
 	--print(timestamp, eventType, srcGUID, srcName,aAmount)
 
 
 	
-	if UnitIsPlayer(srcName) then--玩害普通攻击伤害统计
+	if UnitIsPlayer(srcName) then--玩家普通攻击伤害统计
 		if DamdgeData[srcName] == nil then
 			DamdgeData[srcName] = 0
 		end
+
 		DamdgeData[srcName] = DamdgeData[srcName] + aAmount
+
 	elseif isPartyPet(srcGUID) then--宠物是否是在队伍里的   --宠物伤害统计
     -- get owner
     	local ownerGUID, ownerName = getPetOwnerGUID(srcGUID), getPetOwnerName(srcGUID)
@@ -704,44 +914,48 @@ function MVPFrame:SwingDamage(timestamp, eventType, srcGUID, srcName, srcFlags, 
 	
 end
 
-function MVPFrame:AuraApply(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, auraType, auraAmount)
+function MVPvsFrame:AuraApply(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, auraType, auraAmount)
 	if (Auras[spellId] or (AurasNoTank[spellId] and UnitGroupRolesAssigned(dstName) ~= "TANK")) and UnitIsPlayer(dstName)  then
 		if auraAmount and MVPDB then
-			maybeSendChatMessage("<友情提示> "..dstName.." 受到伤害 "..GetSpellLink(spellId)..". "..auraAmount.." Stacks.")
+			--MVPprint("<友情提示> "..dstName.." 受到伤害 "..GetSpellLink(spellId)..". "..auraAmount.." Stacks.")
 		elseif MVPDB then
-			maybeSendChatMessage("<友情提示> "..dstName.." 受到伤害 "..GetSpellLink(spellId)..".")
+			--MVPprint("<友情提示> "..dstName.." 受到伤害 "..GetSpellLink(spellId)..".")
 		end
 	end
 end
 
-function MVPFrame:COMBAT_LOG_EVENT_UNFILTERED(event,...)
+function MVPvsFrame:COMBAT_LOG_EVENT_UNFILTERED(event,...)
 	local timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,a12,a13,a14,a15,a16,a17,a18,a19,a20 = CombatLogGetCurrentEventInfo(); -- Those arguments appear for all combat event variants.
 	local eventPrefix, eventSuffix = eventType:match("^(.-)_?([^_]*)$");
 
+	
+
 	if (eventPrefix:match("^SPELL") or eventPrefix:match("^RANGE")) and eventSuffix == "DAMAGE" then
 		local spellId, spellName, spellSchool, sAmount, aOverkill, sSchool, sResisted, sBlocked, sAbsorbed, sCritical, sGlancing, sCrushing, sOffhand, _ = select(12,CombatLogGetCurrentEventInfo())
-		MVPFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, sAmount)
+		MVPvsFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, sAmount)
 	elseif eventPrefix:match("^SWING") and eventSuffix == "DAMAGE" then
 		local aAmount, aOverkill, aSchool, aResisted, aBlocked, aAbsorbed, aCritical, aGlancing, aCrushing, aOffhand, _ = select(12,CombatLogGetCurrentEventInfo())
-		MVPFrame:SwingDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, aAmount)
+		MVPvsFrame:SwingDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, aAmount)
 	elseif eventPrefix:match("^SPELL") and eventSuffix == "MISSED" then
 		local spellId, spellName, spellSchool, missType, isOffHand, mAmount  = select(12,CombatLogGetCurrentEventInfo())
 		if mAmount then
-			MVPFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, mAmount)
+			MVPvsFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, mAmount)
 		end
 	elseif eventType == "SPELL_AURA_APPLIED" then
 		local spellId, spellName, spellSchool, auraType = select(12,CombatLogGetCurrentEventInfo())
-		MVPFrame:AuraApply(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, auraType)
+		MVPvsFrame:AuraApply(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, auraType)
 	elseif eventType == "SPELL_AURA_APPLIED_DOSE" then
 		local spellId, spellName, spellSchool, auraType, auraAmount = select(12,CombatLogGetCurrentEventInfo())
-		MVPFrame:AuraApply(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, auraType, auraAmount)
+		MVPvsFrame:AuraApply(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, auraType, auraAmount)
 	elseif eventType == "UNIT_DIED" then --死亡事件JANY
 		local destName = select(9,CombatLogGetCurrentEventInfo())
-		MVPFrame:DeathDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool,destName)
+		MVPvsFrame:DeathDamage(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool,destName)
 	elseif eventType == "SPELL_INTERRUPT" then--打断成功
 		local a12 = select(12,CombatLogGetCurrentEventInfo())
 		local a15 = select(15,CombatLogGetCurrentEventInfo())
-		MVPFrame:InterruptDamage(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,a12,a15)
+		MVPvsFrame:InterruptDamage(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,a12,a15)
+	elseif eventType == "SPELL_DISPEL" then--驱散
+		MVPvsFrame:DISPELDamage(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2)
 	elseif eventType == "SPELL_HEAL" or eventType == "SPELL_PERIODIC_HEAL" and eventType ~= "SPELL_ABSORBED" then--治疗
 		local amount = select(15,CombatLogGetCurrentEventInfo()) - select(16,CombatLogGetCurrentEventInfo())
 		amount = floor(amount + .5)
@@ -749,9 +963,31 @@ function MVPFrame:COMBAT_LOG_EVENT_UNFILTERED(event,...)
 		    -- stop on complete overheal or out of combat; heals will never start a new fight
 		    return
 		end
-		MVPFrame:SpellHeal(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,amount)
-		
-
+		MVPvsFrame:SpellHeal(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2,amount)
 
 	end
+		
+	  -- return on invalid event, vehicle, friendly fire, hostile healing, evaded返回无效事件，车辆，友军火力，敌对治疗，躲避
+	  if not isValidEvent[eventType] or strsplit("-", srcGUID) == "Vehicle" or (band(dstFlags, 16) > 0 and isDamage[eventType])
+	  or (band(dstFlags, 16) == 0 and isHeal[eventType]) or a15 == "EVADE" then
+	    return
+	  else
+
+  	  MVPvsFrame:Batime(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags)
+  	  end
 end
+
+
+
+SLASH_MostValuablePlayer1, SLASH_MostValuablePlayer1 = "/mvp", "/MostValuablePlayer";
+SlashCmdList["MostValuablePlayer"] = function(msgs)
+	if cfg.MVPvsnoti==true then
+		print("MVP关")
+		cfg.MVPvsnoti = false
+
+	else
+		print("MVP开")
+		cfg.MVPvsnoti = true
+	end
+end
+
