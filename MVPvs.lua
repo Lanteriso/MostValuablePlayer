@@ -5953,6 +5953,22 @@ function OilvlConfigFrame()
 		end);
 	if cfg.MVPvsnoti then cfilvlcb1:SetChecked(true) end
 
+		-- 鼠标提示MVP 
+	local cfilvlcb2= createCheckbutton(cfg.frame, 16, -530, "oilvlcfilvl2"," ".."开启鼠标提示MVP分数和3D模型");
+	cfilvlcb2:SetSize(30,30);
+	cfilvlcb2:SetScript("PostClick", function() 
+		if cfg.MVPvsline == false then
+			cfg.MVPvsline = true
+			print("鼠标提示MVP已经打开")
+		else
+			cfg.MVPvsline = false
+			print("鼠标提示MVP已经关闭")
+		end
+		
+		end);
+	if cfg.MVPvsline then cfilvlcb2:SetChecked(true) end
+
+
 	-- character frame item level option
 	local cfilvlcb = createCheckbutton(cfg.frame, 16, -320, "oilvlcfilvl"," "..L["Enable Showing Gear Item Level on Character Frame"]);
 	cfilvlcb:SetSize(30,30);

@@ -1,4 +1,14 @@
 local cfg;
+--API
+
+local CreateFrame = CreateFrame
+local GetScreenWidth, GetScreenHeight = GetScreenWidth, GetScreenHeight
+local backdrop = { --
+bgFile = "Interface\\ChatFrame\\ChatFrameBackground", tile = true, tileSize = 16,
+insets = {left = -1, right = -1, top = -1, bottom = -1},
+                }
+
+
 
 local Users = {}
 local Timers = {}
@@ -245,6 +255,9 @@ end
 
 
 
+
+
+
 local MVPvsFrame = CreateFrame("Frame", "MVPvsFrame")
 MVPvsFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
@@ -264,6 +277,34 @@ MVPvsFrame.text = MVPvsFrame:CreateFontString(nil, "BACKGROUND", "PVPInfoTextFon
 MVPvsFrame.text:SetAllPoints()
 MVPvsFrame.text:SetTextHeight(13)
 MVPvsFrame:SetAlpha(1)
+
+
+
+local modelHolder2 = CreateFrame("Frame", nil,UIParent)
+modelHolder2:SetSize(300, 500)
+modelHolder2:SetPoint("CENTER",UIParent,"CENTER", -500, 0)
+
+playerModel2 = CreateFrame("PlayerModel", nil, modelHolder2)
+playerModel2:SetPoint("CENTER", modelHolder2, "CENTER")
+
+
+
+
+
+
+
+modelHolder2:SetScript("OnMouseDown", function(self)
+	modelHolder2:EnableMouse(false)
+    modelHolder2:SetMovable(false)
+	playerModel2:SetUnit("none")
+
+
+end);
+playerModel2.isIdle = nil
+playerModel2:SetSize(GetScreenWidth() * 2, GetScreenHeight() * 2) --YES, double screen size. This prevents clipping of models.
+playerModel2:Show()
+
+
 
 function table.pack(...)
   return { n = select("#", ...), ... }
@@ -335,6 +376,19 @@ end
 
 ----------------------鼠标提示相关------------------
 local function addLine(tooltip, id, kind,guname)
+
+if cfg.MVPvsline == false then	
+	playerModel2:ClearModel()
+	playerModel2:SetUnit(guname)
+	playerModel2:SetFacing(6.5)
+	playerModel2:SetPortraitZoom(0.05)
+	playerModel2:SetCamDistanceScale(4.8)
+	playerModel2:SetAlpha(1)
+	playerModel2:SetAnimation(random(1,225))
+	UIFrameFadeIn(playerModel2, 1, playerModel2:GetAlpha(), 1)
+	modelHolder2:EnableMouse(true)
+    modelHolder2:SetMovable(true)
+   end
   if not id or id == "" then return end
   if type(id) == "table" and #id == 1 then id = id[1] end
 
@@ -346,7 +400,10 @@ local function addLine(tooltip, id, kind,guname)
     if text and string.find(text, kind .. ":") then return end
   end
 
-  if MVPLilst[guname] then
+
+
+
+  if MVPLilst[guname] and cfg.MVPvsline == true then
 
 
 	  tooltip:AddDoubleLine(MVPLilst[guname])
@@ -606,7 +663,16 @@ function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
 	for k, v in pairs(score) do table.insert(fs, { key = k, value = v }) end
 	table.sort(fs, compareMVP)
 	for k,v in pairs(fs) do
-
+		playerModel2:ClearModel()
+		playerModel2:SetUnit(v["key"])
+		playerModel2:SetFacing(6.5)
+		playerModel2:SetPortraitZoom(0.05)
+		playerModel2:SetCamDistanceScale(4.8)
+		playerModel2:SetAlpha(1)
+		playerModel2:SetAnimation(random(1,225))
+		UIFrameFadeIn(playerModel2, 1, playerModel2:GetAlpha(), 1)
+		modelHolder2:EnableMouse(true)
+    	modelHolder2:SetMovable(true)
 		MVPprint("团队得分 "..allscore.."恭喜 "..v["key"].." "..v["value"].." 分   【MVP】")
 		break
 
@@ -852,6 +918,8 @@ function MVPvsFrame:SpellHeal(timestamp, eventType, hideCaster, srcGUID, srcName
 end
 
 
+
+
 local amounts = 0
 function MVPvsFrame:Batime(timestamp, eventType, hideCaster, srcGUID, srcName, srcFlags, srcFlags2, dstGUID, dstName, dstFlags, dstFlags2)
 	
@@ -872,20 +940,21 @@ function MVPvsFrame:Batime(timestamp, eventType, hideCaster, srcGUID, srcName, s
 		
 		amounts = timestamp - deftime[srcName]
 	  if amounts < 3.5 then
-	  	--SendChatMessage("加"..amounts,"PARTY")
+
 	    Battletime[srcName] = Battletime[srcName] + amounts
-	  --elseif amounts < 10 then
-	    --Battletime[srcName] = Battletime[srcName] + amounts
+
 	  else
-	  	--SendChatMessage("加"..amounts,"PARTY")
+
 	  	Battletime[srcName] = Battletime[srcName] + 3.5
 	  end
-	  --print(com.fight[1].t,com.fight[2].t)
-	  -- save timestamp 保存时间戳
+
   	  deftime[srcName] = timestamp
-  	 --/run SendChatMessage(Battletime["卢瑟希"],"PARTY"))
-  	 --SendChatMessage(Battletime["卢瑟希"].."------"..DamdgeData["卢瑟希"].."------"..DamdgeData["卢瑟希"]/Battletime["卢瑟希"],"PARTY")
+
     end
+
+
+
+
 
 end
 
@@ -983,6 +1052,7 @@ SLASH_MostValuablePlayer1, SLASH_MostValuablePlayer1 = "/mvp", "/MostValuablePla
 SlashCmdList["MostValuablePlayer"] = function(msgs)
 	if cfg.MVPvsnoti==true then
 		print("MVP关")
+
 		cfg.MVPvsnoti = false
 
 	else
@@ -990,4 +1060,6 @@ SlashCmdList["MostValuablePlayer"] = function(msgs)
 		cfg.MVPvsnoti = true
 	end
 end
+
+
 

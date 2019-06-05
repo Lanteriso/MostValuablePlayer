@@ -30,3 +30,4 @@ cfg.MVPvsbagilvl = false; -- show item level of gear in bag
 cfg.MVPvscolormatchitemrarity = true; -- item level color follow the color of item rarity
 
 cfg.MVPvsnoti = true; -- 通报MVP
+cfg.MVPvsline = true; -- 鼠标提示MVP
