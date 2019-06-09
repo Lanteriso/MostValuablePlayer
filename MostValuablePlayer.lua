@@ -33,7 +33,7 @@ local challengeMapID
 
 local tonumber, band = tonumber, bit.band
 local isValidEvent = {
-  SWING_DAMAGE = true,
+  SWING_DAMAGE = true,  
   SWING_MISSED = true,
   RANGE_DAMAGE = true,
   RANGE_MISSED = true,
