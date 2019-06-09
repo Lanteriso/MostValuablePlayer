@@ -4,7 +4,7 @@ local cfg;
 local CreateFrame = CreateFrame
 local GetScreenWidth, GetScreenHeight = GetScreenWidth, GetScreenHeight
 local backdrop = { --
-bgFile = "Interface\\ChatFrame\\ChatFrameBackground", tile = true, tileSize = 16,
+bgFile = "Interface/AddOns/MostValuablePlayer/Custom/mvp2.tga", tile = false, tileSize = 512,
 insets = {left = -1, right = -1, top = -1, bottom = -1},
                 }
 
@@ -22,6 +22,7 @@ local score = {}--评分
 local Battletime= {}--战斗时长
 local HealData = {} -- 治疗
 local deftime = {}
+local dps = {}
 local activeUser = nil
 local playerUser = GetUnitName("player",true).."-"..GetRealmName():gsub(" ", "")
 local hardMinPct = 20
@@ -281,7 +282,7 @@ MVPvsFrame:SetAlpha(1)
 
 
 local modelHolder2 = CreateFrame("Frame", nil,UIParent)
-modelHolder2:SetSize(300, 500)
+modelHolder2:SetSize(512,512)
 modelHolder2:SetPoint("CENTER",UIParent,"CENTER", -500, 0)
 
 playerModel2 = CreateFrame("PlayerModel", nil, modelHolder2)
@@ -294,10 +295,11 @@ playerModel2:SetPoint("CENTER", modelHolder2, "CENTER")
 
 
 modelHolder2:SetScript("OnMouseDown", function(self)
+
 	modelHolder2:EnableMouse(false)
     modelHolder2:SetMovable(false)
 	playerModel2:SetUnit("none")
-
+	modelHolder2:SetBackdropColor(0, 0, 0, 0)
 
 end);
 playerModel2.isIdle = nil
@@ -361,8 +363,8 @@ function generateMaybeOutput(user)
 		end
 	return func
 end
-
-local function UnitFullName(unit)
+--[[
+local function UnitFullName2(unit)
     if not unit then return UNKNOWNOBJECT end
     local name, realm = UnitName(unit)
     if not realm or realm=="" then
@@ -373,11 +375,11 @@ local function UnitFullName(unit)
     end
     return name.."-"..realm
 end
-
+]]
 ----------------------鼠标提示相关------------------
 local function addLine(tooltip, id, kind,guname)
 
-if cfg.MVPvsline == false then	
+if cfg.MVPvsline == false and cfg.MVPvsline == true then	
 	playerModel2:ClearModel()
 	playerModel2:SetUnit(guname)
 	playerModel2:SetFacing(6.5)
@@ -386,6 +388,7 @@ if cfg.MVPvsline == false then
 	playerModel2:SetAlpha(1)
 	playerModel2:SetAnimation(random(1,225))
 	UIFrameFadeIn(playerModel2, 1, playerModel2:GetAlpha(), 1)
+	modelHolder2:SetBackdrop(backdrop)
 	modelHolder2:EnableMouse(true)
     modelHolder2:SetMovable(true)
    end
@@ -472,6 +475,10 @@ function maybeSendAddonMessage(prefix, message)
 	end
 end
 function MVPprint(messages)
+	if activeUser ~= playerUser then
+		print(messages)
+		return
+	end
 	if cfg.MVPvsnoti == true then
 		SendChatMessage(messages,"PARTY")
 	else
@@ -497,13 +504,17 @@ end
 function MVPvsFrame:RebuildTable()--权重
 	Users = {}
 	activeUser = nil
+	
 	if IsInGroup() then
+		
 		maybeSendAddonMessage(MSG_PREFIX,"VREQ")
 	else
+		
 		name = GetUnitName("player",true)
-		activeUser = name.."-"..GetRealmName()--名字-服务器名
-		--print("【MVP插件】: "..activeUser)
+		activeUser = name.."-"..GetRealmName()
+
 	end
+
 end
 
 function MVPvsFrame:ADDON_LOADED(event,addon)
@@ -561,150 +572,159 @@ local function timeFormats(timeAmount)
 		return hours * 60 + minutes
 	end
 end
-function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event,...)--挑战模式完成时
-	--[[
-	C_ChallengeMode.GetActiveChallengeMapID()
-	C_ChallengeMode.GetActiveKeystoneInfo()
-	C_ChallengeMode.GetAffixInfo(affixID)
-	C_ChallengeMode.GetCompletionInfo()
-	C_ChallengeMode.GetDeathCount()
-	C_ChallengeMode.GetGuildLeaders()
-	C_ChallengeMode.GetMapTable()
-	C_ChallengeMode.GetMapUIInfo(mapChallengeModeID)
-	C_ChallengeMode.GetPowerLevelDamageHealthMod(powerLevel)
-	C_ChallengeMode.GetSlottedKeystoneInfo()
-	activeKeystoneLevel, activeAffixIDs, wasActiveKeystoneCharged = C_ChallengeMode.GetActiveKeystoneInfo()
-	mapChallengeModeID, level, time, onTime, keystoneUpgradeLevels = C_ChallengeMode.GetCompletionInfo()
-	mapChallengeModeID = C_ChallengeMode.GetActiveChallengeMapID()
-	name, description, filedataid = C_ChallengeMode.GetAffixInfo(affixID)
-	numDeaths, timeLost = C_ChallengeMode.GetDeathCount()
-	topAttempt = C_ChallengeMode.GetGuildLeaders()
-	mapChallengeModeIDs = C_ChallengeMode.GetMapTable()
-	name, id, timeLimit, texture, backgroundTexture = C_ChallengeMode.GetMapUIInfo(mapChallengeModeID)
-	damageMod, healthMod = C_ChallengeMode.GetPowerLevelDamageHealthMod(powerLevel)
-	mapChallengeModeID, affixIDs, keystoneLevel = C_ChallengeMode.GetSlottedKeystoneInfo()
+function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event, ...)--挑战模式完成时
 
-	local activeKeystoneLevel, activeAffixIDs, wasActiveKeystoneCharged = C_ChallengeMode.GetActiveKeystoneInfo()
-	print("1 ",activeKeystoneLevel, activeAffixIDs, wasActiveKeystoneCharged )--7  table  true
-	local mapChallengeModeID, level, time, onTime, keystoneUpgradeLevels = C_ChallengeMode.GetCompletionInfo()
-	print("2 ",mapChallengeModeID, level, time, onTime, keystoneUpgradeLevels)--地图ID 钥匙等级 用时 是否限时 +几     1864  7  2393669 true  1
-	local mapChallengeModeID = C_ChallengeMode.GetActiveChallengeMapID()
-	print("3 ",mapChallengeModeID)
-	local numDeaths, timeLost = C_ChallengeMode.GetDeathCount()
-	print("4 ",numDeaths, timeLost)--  10死  50 秒
-	local topAttempt = C_ChallengeMode.GetGuildLeaders()
-	print("5 ",topAttempt)
-	local mapChallengeModeIDs = C_ChallengeMode.GetMapTable()
-	print("6 ",mapChallengeModeIDs)
-	local mapChallengeModeID, affixIDs, keystoneLevel = C_ChallengeMode.GetSlottedKeystoneInfo()
-	print("7 ",mapChallengeModeID, affixIDs, keystoneLevel)
-	]]
+    local TIME_FOR_3 = 0.6
+    local TIME_FOR_2 = 0.8
 
-	local TIME_FOR_3 = 0.6
-	local TIME_FOR_2 = 0.8
-	--keystoneWasCompleted = true
-	
-	if not challengeMapID then print("challengeMapID") end
-
-	local mapID, level, time, onTime, keystoneUpgradeLevels = C_ChallengeMode.GetCompletionInfo()
-	local name, _, timeLimit = C_ChallengeMode.GetMapUIInfo(challengeMapID)
-
-	timeLimit = timeLimit * 1000
-	local timeLimit2 = timeLimit * TIME_FOR_2
-	local timeLimit3 = timeLimit * TIME_FOR_3
-	local RemainingTime
-	print("CHALLENGE_MODE_COMPLETED",mapID, level, time, onTime, keystoneUpgradeLevels,name, timeLimit,timeLimit2,timeLimit3)
-	if time <= timeLimit3 then
-		print( format("|cff33ff99<%s>|r |cffffd700%s|r", "MVP", format("恭喜你在规定时间内获得了 %s 的3箱奖励！共耗时 %s，3箱奖励剩余时间 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit3 - time))) )
-		RemainingTime=timeFormats(timeLimit3 - time)
-	elseif time <= timeLimit2 then
-		print( format("|cff33ff99<%s>|r |cffc7c7cf%s|r", "MVP", format("恭喜你在规定时间内获得了 %s 的2箱奖励！共耗时 %s，2箱奖励剩余时间 %s，3箱奖励超时 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit2 - time), timeFormatMS(time - timeLimit3))) )
-		RemainingTime=timeFormats(timeLimit2 - time)
-	elseif onTime then
-		print( format("|cff33ff99<%s>|r |cffeda55f%s|r", "MVP", format("恭喜你在规定时间内完成了 %s 的战斗！共耗时 %s，剩余时间 %s，2箱奖励超时 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit - time), timeFormatMS(time - timeLimit2))) )
-		RemainingTime=timeFormats(timeLimit - time)
-	else
-		print( format("|cff33ff99<%s>|r |cffff2020%s|r", "MVP", format("很遗憾你超时完成了 %s 的战斗。共耗时 %s，超出规定时间 %s。", name, timeFormatMS(time), timeFormatMS(time - timeLimit))) )
-		RemainingTime=timeFormats(time - timeLimit)*-1
+    if not challengeMapID then print("challengeMapID") end
+    
+    local mapID, level, time, onTime, keystoneUpgradeLevels = C_ChallengeMode.GetCompletionInfo()
+    local name, _, timeLimit = C_ChallengeMode.GetMapUIInfo(challengeMapID)
+    
+    timeLimit = timeLimit * 1000
+    local timeLimit2 = timeLimit * TIME_FOR_2
+    local timeLimit3 = timeLimit * TIME_FOR_3
+    local RemainingTime
+    print("CHALLENGE_MODE_COMPLETED", mapID, level, time, onTime, keystoneUpgradeLevels, name, timeLimit, timeLimit2, timeLimit3)
+    if time <= timeLimit3 then
+        print(format("|cff33ff99<%s>|r |cffffd700%s|r", "MVP", format("恭喜你在规定时间内获得了 %s 的3箱奖励！共耗时 %s，3箱奖励剩余时间 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit3 - time))))
+        RemainingTime = timeFormats(timeLimit3 - time)
+    elseif time <= timeLimit2 then
+        print(format("|cff33ff99<%s>|r |cffc7c7cf%s|r", "MVP", format("恭喜你在规定时间内获得了 %s 的2箱奖励！共耗时 %s，2箱奖励剩余时间 %s，3箱奖励超时 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit2 - time), timeFormatMS(time - timeLimit3))))
+        RemainingTime = timeFormats(timeLimit2 - time)
+    elseif onTime then
+        print(format("|cff33ff99<%s>|r |cffeda55f%s|r", "MVP", format("恭喜你在规定时间内完成了 %s 的战斗！共耗时 %s，剩余时间 %s，2箱奖励超时 %s。", name, timeFormatMS(time), timeFormatMS(timeLimit - time), timeFormatMS(time - timeLimit2))))
+        RemainingTime = timeFormats(timeLimit - time)
+    else
+        print(format("|cff33ff99<%s>|r |cffff2020%s|r", "MVP", format("很遗憾你超时完成了 %s 的战斗。共耗时 %s，超出规定时间 %s。", name, timeFormatMS(time), timeFormatMS(time - timeLimit))))
+        RemainingTime = timeFormats(time - timeLimit) * -1
+    end
+    
+    MVPprint(name .. level .. "层    玩家         伤害           额外受伤        治疗     打断   驱散   阵亡      评分")
+    
+    if IsAddOnLoaded("details") then
+	    local ticker = C_Timer.NewTicker(3, function(ticker)
+	        if not InCombatLockdown() then
+	                local allscore = 0
+	                for k, v in pairs(DamdgeData) do
+	                    if not v then v = 0 end
+	                    if not CombinedFails[k] then CombinedFails[k] = 0 end
+	                    if not InterruptData[k] then InterruptData[k] = 0 end
+	                    if not DispelData[k] then DispelData[k] = 0 end
+	                    if not DeathData[k] then DeathData[k] = 0 end
+	                    if not HealData[k] then HealData[k] = 0 end
+	                    if not score[k] then score[k] = 0 end
+	                    if not dps[k] then dps[k] = 0 end
+	                    if IsAddOnLoaded("details") then
+	                        v = Details.UnitDamage(k)
+	                        Battletime[k] = Details.SegmentElapsedTime()
+	                        HealData[k] = Details.UnitHealing(k)                       
+	                    end
+	                    dps[k] = (("%%.%df"):format(2)):format((v / Battletime[k]) / 10000)
+	                    score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000, 1) + InterruptData[k] + DispelData[k] - DeathData[k] * 3 + (level + keystoneUpgradeLevels) * 10 + RemainingTime
+	                    allscore = allscore + score[k]
+	                end
+	                
+	                for k, v in pairs(DamdgeData) do
+	                    --评分公式    (总伤害量 + 治疗 - 额外受伤 * 3) / 100000 + 打断 + 驱散 - 死亡 * 3 + (层数 + 几箱) *10 + 剩余时间  \n|r
+	                    -- print(v, "伤害--【这是测试数据】--时间", Battletime[k])
+	                    MVPLilst[k] = name .. level .. "层 " .. "【+" .. keystoneUpgradeLevels .. "】" .. allscore .. "团队得分 " .. score[k] .. "个人分 " .. (allscore / 5) .. "平均分\n|r " .. dps[k] .. "万秒伤 " .. round(v / 10000, 1) .. "万伤害 " .. round(CombinedFails[k] / 10000, 1) .. "万受伤 " .. round(HealData[k] / 10000, 1) .. "万疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 "
+	                    MVPprint(k .." ".. round(v / 10000, 1) .. "万伤害 " .. round(CombinedFails[k] / 10000, 1) .. "万受伤 " .. round(HealData[k] / 10000, 1) .. "万疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 " .. score[k] .. "分")--总伤害量 额外受伤 死亡次数  打断次数
+	                --print("【sovijo】说：","伤害-额外受伤-打断-死亡-评分-MVP",round((30000000 - 2000000 * 3) / 100000 ,1) + 30 - 5*3)      层数*10 + 限时箱 *10 + 剩余时间   (level+keystoneUpgradeLevels)*10 + RemainingTime
+	                end
+	                
+	                local fs = {}
+	                for k, v in pairs(score) do table.insert(fs, {key = k, value = v}) end
+	                
+	                table.sort(fs, compareMVP)
+	                
+	                for k, v in pairs(fs) do
+						playerModel2:ClearModel()
+						playerModel2:SetUnit(guname)
+						playerModel2:SetFacing(6.5)
+						playerModel2:SetPortraitZoom(0.05)
+						playerModel2:SetCamDistanceScale(4.8)
+						playerModel2:SetAlpha(1)
+						playerModel2:SetAnimation(random(1,225))
+						UIFrameFadeIn(playerModel2, 1, playerModel2:GetAlpha(), 1)
+						modelHolder2:SetBackdrop(backdrop)
+						modelHolder2:EnableMouse(true)
+					    modelHolder2:SetMovable(true)
+	                    MVPprint("恭喜 " .. v["key"] .. " " .. v["value"] .. " 分   【MVP】" .. "团队得分 " .. allscore)
+	                    break
+	                
+	                end
+	                CombinedFails = {}-- 不躲技能受到的伤害
+	                DeathData = {}--挑战模式完成时 重置死亡次数为nil  ----jany
+	                DamdgeData = {}--挑战模式完成时 重置总伤害为nil---jany
+	                InterruptData = {}--打断次数
+	                DispelData = {}--驱散次数
+	                HealData = {}--治疗
+	                deftime = {}
+	                score = {}--评分
+	                Battletime = {}--战斗时长
+	            
+	        ticker:Cancel()   
+	        end
+	    
+	    end)
+	else     
+        local allscore = 0
+        for k, v in pairs(DamdgeData) do
+            if not v then v = 0 end
+            if not CombinedFails[k] then CombinedFails[k] = 0 end
+            if not InterruptData[k] then InterruptData[k] = 0 end
+            if not DispelData[k] then DispelData[k] = 0 end
+            if not DeathData[k] then DeathData[k] = 0 end
+            if not HealData[k] then HealData[k] = 0 end
+            if not score[k] then score[k] = 0 end
+            if not dps[k] then dps[k] = 0 end
+            dps[k] = (("%%.%df"):format(2)):format((v / Battletime[k]) / 10000)
+            score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000, 1) + InterruptData[k] + DispelData[k] - DeathData[k] * 3 + (level + keystoneUpgradeLevels) * 10 + RemainingTime
+            allscore = allscore + score[k]
+        end
+        
+        for k, v in pairs(DamdgeData) do
+            --评分公式    (总伤害量 + 治疗 - 额外受伤 * 3) / 100000 + 打断 + 驱散 - 死亡 * 3 + (层数 + 几箱) *10 + 剩余时间  \n|r
+            -- print(v, "伤害--【这是测试数据】--时间", Battletime[k])
+            MVPLilst[k] = name .. level .. "层 " .. "【+" .. keystoneUpgradeLevels .. "】" .. allscore .. "团队得分 " .. score[k] .. "个人分 " .. (allscore / 5) .. "平均分\n|r " .. dps[k] .. "万秒伤 " .. round(v / 10000, 1) .. "万伤害 " .. round(CombinedFails[k] / 10000, 1) .. "万受伤 " .. round(HealData[k] / 10000, 1) .. "万疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 "
+            MVPprint(k .." ".. round(v / 10000, 1) .. "万伤害 " .. round(CombinedFails[k] / 10000, 1) .. "万受伤 " .. round(HealData[k] / 10000, 1) .. "万疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 " .. score[k] .. "分")--总伤害量 额外受伤 死亡次数  打断次数
+        --print("【sovijo】说：","伤害-额外受伤-打断-死亡-评分-MVP",round((30000000 - 2000000 * 3) / 100000 ,1) + 30 - 5*3)      层数*10 + 限时箱 *10 + 剩余时间   (level+keystoneUpgradeLevels)*10 + RemainingTime
+        end
+        local fs = {}
+        for k, v in pairs(score) do table.insert(fs, {key = k, value = v}) end
+        table.sort(fs, compareMVP)
+        for k, v in pairs(fs) do
+			playerModel2:ClearModel()
+			playerModel2:SetUnit(guname)
+			playerModel2:SetFacing(6.5)
+			playerModel2:SetPortraitZoom(0.05)
+			playerModel2:SetCamDistanceScale(4.8)
+			playerModel2:SetAlpha(1)
+			playerModel2:SetAnimation(random(1,225))
+			UIFrameFadeIn(playerModel2, 1, playerModel2:GetAlpha(), 1)
+			modelHolder2:SetBackdrop(backdrop)
+			modelHolder2:EnableMouse(true)
+		    modelHolder2:SetMovable(true)
+            MVPprint("恭喜 " .. v["key"] .. " " .. v["value"] .. " 分   【MVP】" .. "团队得分 " .. allscore)
+            break
+        end
+        CombinedFails = {}-- 不躲技能受到的伤害
+        DeathData = {}--挑战模式完成时 重置死亡次数为nil  ----jany
+        DamdgeData = {}--挑战模式完成时 重置总伤害为nil---jany
+        InterruptData = {}--打断次数
+        DispelData = {}--驱散次数
+        HealData = {}--治疗
+        deftime = {}
+        score = {}--评分
+        Battletime = {}--战斗时长
+	   
 	end
-
-	MVPprint(name..level.."层    玩家         伤害           额外受伤        治疗     打断   驱散   阵亡      评分")
-	
-	local allscore = 0
-	for k, v in pairs(DamdgeData) do 
-		if not v then v=0 end
-		if not CombinedFails[k] then CombinedFails[k] = 0 end
-		if not InterruptData[k] then InterruptData[k] = 0 end
-		if not DispelData[k] then DispelData[k] = 0 end
-		if not DeathData[k] then DeathData[k] = 0 end
-		if not HealData[k] then HealData[k] = 0 end
-		if not score[k] then score[k] = 0 end
-		score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000 ,1)+InterruptData[k]+DispelData[k]-DeathData[k]*3+(level+keystoneUpgradeLevels)*10 + RemainingTime
-		allscore = allscore + score[k]
-	end
-
-
-	for k, v in pairs(DamdgeData) do 
-		if not v then v=0 end
-		if not CombinedFails[k] then CombinedFails[k] = 0 end
-		if not InterruptData[k] then InterruptData[k] = 0 end
-		if not DispelData[k] then DispelData[k] = 0 end
-		if not DeathData[k] then DeathData[k] = 0 end
-		if not HealData[k] then HealData[k] = 0 end
-		if not score[k] then score[k] = 0 end
-		--评分公式    (总伤害量 + 治疗 - 额外受伤 * 3) / 100000 + 打断 + 驱散 - 死亡 * 3 + (层数 + 几箱) *10 + 剩余时间  \n|r
-    print(v,"伤害--【这是测试数据】--时间",Battletime[k])
-		score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000 ,1)+InterruptData[k]+DispelData[k]-DeathData[k]*3+(level+keystoneUpgradeLevels)*10 + RemainingTime
-		MVPLilst[k]=name..level.."层 ".."【+"..keystoneUpgradeLevels.."】"..allscore.."团队得分 "..score[k].."个人分 "..(allscore/5).."平均分\n|r "..round((v/Battletime[k])/10000,2).."秒伤 "..round(v / 10000 ,1).."伤害 "..round(CombinedFails[k] / 10000 ,1).."受伤 "..round(HealData[k] / 10000 ,1).."疗 "..InterruptData[k].."断 "..DispelData[k].."驱 "..DeathData[k].."亡 "
-		MVPprint(k..round(v / 10000 ,1).."伤害 "..round(CombinedFails[k] / 10000 ,1).."受伤 "..round(HealData[k] / 10000 ,1).."疗 "..InterruptData[k].."断 "..DispelData[k].."驱 "..DeathData[k].."亡 "..score[k].."分") --总伤害量 额外受伤 死亡次数  打断次数
-		--print("【sovijo】说：","伤害-额外受伤-打断-死亡-评分-MVP",round((30000000 - 2000000 * 3) / 100000 ,1) + 30 - 5*3)      层数*10 + 限时箱 *10 + 剩余时间   (level+keystoneUpgradeLevels)*10 + RemainingTime
-	end
-	local fs = { }
-	for k, v in pairs(score) do table.insert(fs, { key = k, value = v }) end
-	table.sort(fs, compareMVP)
-	for k,v in pairs(fs) do
-		playerModel2:ClearModel()
-		playerModel2:SetUnit(v["key"])
-		playerModel2:SetFacing(6.5)
-		playerModel2:SetPortraitZoom(0.05)
-		playerModel2:SetCamDistanceScale(4.8)
-		playerModel2:SetAlpha(1)
-		playerModel2:SetAnimation(random(1,225))
-		UIFrameFadeIn(playerModel2, 1, playerModel2:GetAlpha(), 1)
-		modelHolder2:EnableMouse(true)
-    	modelHolder2:SetMovable(true)
-		MVPprint("团队得分 "..allscore.."恭喜 "..v["key"].." "..v["value"].." 分   【MVP】")
-		break
-
-	end
-
-	local count = 0
-	for _ in pairs(CombinedFails) do count = count + 1 end
-	if count == 0 then
-		--maybeSendChatMessage(".")
-		return
-	else
-		--print("--------------------:")
-		--maybeSendChatMessage("----------排行榜:")
-	end
-	local u = { }
-	for k, v in pairs(CombinedFails) do table.insert(u, { key = k, value = v }) end
-	table.sort(u, compareDamage)
-	for k,v in pairs(u) do--额外伤害排行
-		--print(k..". "..v["key"].." "..round(v["value"] / 10000 ,1).." 万")
-			--maybeSendChatMessage(k..". "..v["key"].." "..round(v["value"] / 10000 ,1).." 万")
-	end
-	CombinedFails = {} -- 不躲技能受到的伤害
-	DeathData = {}--挑战模式完成时 重置死亡次数为nil  ----jany
-	DamdgeData = {}--挑战模式完成时 重置总伤害为nil---jany
-	InterruptData ={} --打断次数
-	DispelData ={} --驱散次数
-	HealData ={}--治疗
-	deftime={}
-	score={}--评分
-	Battletime= {}--战斗时长
 
 end
+
+
 
 function MVPvsFrame:CHALLENGE_MODE_START(event,...)--挑战模式启动 时重置伤害为nil,死亡次数为nil
 	CombinedFails = {} -- 不躲技能受到的伤害
@@ -717,16 +737,22 @@ function MVPvsFrame:CHALLENGE_MODE_START(event,...)--挑战模式启动 时重�
 	score={}
 	Battletime= {}--战斗时长
 	challengeMapID = C_ChallengeMode.GetActiveChallengeMapID()
+	print("欢迎使用MVP通报 "..activeUser)
 end
 
 function MVPvsFrame:CHAT_MSG_ADDON(event,...)
 	local prefix, message, channel, sender = select(1,...)
+	
+
 	if prefix ~= MSG_PREFIX then
 		return
 	end
 	if message == "VREQ" then
-		maybeSendAddonMessage(MSG_PREFIX,"VANS;0.1")
+		maybeSendAddonMessage(MSG_PREFIX,"VANS;1.1")
 	elseif message:match("^VANS") then
+		if tonumber(message:match("(%d+.%d+)")) > 1.1 then 
+			print('MVP有新版本,你可以在NGA下载到最新的版本.')
+		end
 		Users[sender] = message
 		for k,v in pairs(Users) do
 			if activeUser == nil then
@@ -737,7 +763,7 @@ function MVPvsFrame:CHAT_MSG_ADDON(event,...)
 			end
 		end
 	else
-		--print("Unknown message: "..message)
+
 	end
 end
 
@@ -821,10 +847,9 @@ function MVPvsFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags
 		if CombinedFails[dstName] == nil then
 			CombinedFails[dstName] = 0
 		end
-
-		
-		-- Add this event to TimerData / CombinedFails
 		CombinedFails[dstName] = CombinedFails[dstName] + aAmount
+
+
 		if TimerData[dstName][spellId] == nil then
 			TimerData[dstName][spellId] = aAmount
 		else
@@ -833,7 +858,7 @@ function MVPvsFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags
 
 
 		
-		-- 如果还没有计时器，请使用此事件启动计时器。在2秒内受到的伤害，防刷屏吧？猜的，可以改成别的时间，比如10秒
+		-- 如果还没有计时器，请使用此事件启动计时器。在2秒内受到的伤害，防刷屏，可以改成别的时间，比如10秒
 		if Timers[dstName] == nil then
 			Timers[dstName] = true
 			C_Timer.After(2,generateMaybeOutput(dstName))
