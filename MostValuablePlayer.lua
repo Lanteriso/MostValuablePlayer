@@ -603,10 +603,7 @@ function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event, ...)--挑战模式完成时
     
     MVPprint(name .. level .. "层    玩家         伤害           额外受伤        治疗     打断   驱散   阵亡      评分")
     
-    if IsAddOnLoaded("details") then
-	    local ticker = C_Timer.NewTicker(3, function(ticker)
-	        if not InCombatLockdown() then
-	                local allscore = 0
+   	                local allscore = 0
 	                for k, v in pairs(DamdgeData) do
 	                    if not v then v = 0 end
 	                    if not CombinedFails[k] then CombinedFails[k] = 0 end
@@ -616,10 +613,17 @@ function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event, ...)--挑战模式完成时
 	                    if not HealData[k] then HealData[k] = 0 end
 	                    if not score[k] then score[k] = 0 end
 	                    if not dps[k] then dps[k] = 0 end
-	                    if IsAddOnLoaded("details") then
-	                        v = Details.UnitDamage(k)
-	                        Battletime[k] = Details.SegmentElapsedTime()
-	                        HealData[k] = Details.UnitHealing(k)                       
+						if IsAddOnLoaded("details") then
+							local ticker = C_Timer.NewTicker(1, function(ticker)
+								if not InCombatLockdown() then
+									C_Timer.After(1,function()
+	                        			v = Details.UnitDamage(k)
+	                        			Battletime[k] = Details.SegmentElapsedTime()
+										HealData[k] = Details.UnitHealing(k) 
+										ticker:Cancel()
+									end)
+								end
+							end)                      
 	                    end
 	                    dps[k] = (("%%.%df"):format(2)):format((v / Battletime[k]) / 10000)
 	                    score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000, 1) + InterruptData[k] + DispelData[k] - DeathData[k] * 3 + (level + keystoneUpgradeLevels) * 10 + RemainingTime
@@ -663,65 +667,7 @@ function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event, ...)--挑战模式完成时
 	                HealData = {}--治疗
 	                deftime = {}
 	                score = {}--评分
-	                Battletime = {}--战斗时长
-	            
-	        ticker:Cancel()   
-	        end
-	    
-	    end)
-	else     
-        local allscore = 0
-        for k, v in pairs(DamdgeData) do
-            if not v then v = 0 end
-            if not CombinedFails[k] then CombinedFails[k] = 0 end
-            if not InterruptData[k] then InterruptData[k] = 0 end
-            if not DispelData[k] then DispelData[k] = 0 end
-            if not DeathData[k] then DeathData[k] = 0 end
-            if not HealData[k] then HealData[k] = 0 end
-            if not score[k] then score[k] = 0 end
-            if not dps[k] then dps[k] = 0 end
-            dps[k] = (("%%.%df"):format(2)):format((v / Battletime[k]) / 10000)
-            score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000, 1) + InterruptData[k] + DispelData[k] - DeathData[k] * 3 + (level + keystoneUpgradeLevels) * 10 + RemainingTime
-            allscore = allscore + score[k]
-        end
-        
-        for k, v in pairs(DamdgeData) do
-            --评分公式    (总伤害量 + 治疗 - 额外受伤 * 3) / 100000 + 打断 + 驱散 - 死亡 * 3 + (层数 + 几箱) *10 + 剩余时间  \n|r
-            -- print(v, "伤害--【这是测试数据】--时间", Battletime[k])
-            MVPLilst[k] = name .. level .. "层 " .. "【+" .. keystoneUpgradeLevels .. "】" .. allscore .. "团队得分 " .. score[k] .. "个人分 " .. (allscore / 5) .. "平均分\n|r " .. dps[k] .. "万秒伤 " .. round(v / 10000, 1) .. "万伤害 " .. round(CombinedFails[k] / 10000, 1) .. "万受伤 " .. round(HealData[k] / 10000, 1) .. "万疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 "
-            MVPprint(k .." ".. round(v / 10000, 1) .. "万伤害 " .. round(CombinedFails[k] / 10000, 1) .. "万受伤 " .. round(HealData[k] / 10000, 1) .. "万疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 " .. score[k] .. "分")--总伤害量 额外受伤 死亡次数  打断次数
-        --print("【sovijo】说：","伤害-额外受伤-打断-死亡-评分-MVP",round((30000000 - 2000000 * 3) / 100000 ,1) + 30 - 5*3)      层数*10 + 限时箱 *10 + 剩余时间   (level+keystoneUpgradeLevels)*10 + RemainingTime
-        end
-        local fs = {}
-        for k, v in pairs(score) do table.insert(fs, {key = k, value = v}) end
-        table.sort(fs, compareMVP)
-        for k, v in pairs(fs) do
-			playerModel2:ClearModel()
-			playerModel2:SetUnit(guname)
-			playerModel2:SetFacing(6.5)
-			playerModel2:SetPortraitZoom(0.05)
-			playerModel2:SetCamDistanceScale(4.8)
-			playerModel2:SetAlpha(1)
-			playerModel2:SetAnimation(random(1,225))
-			UIFrameFadeIn(playerModel2, 1, playerModel2:GetAlpha(), 1)
-			modelHolder2:SetBackdrop(backdrop)
-			modelHolder2:EnableMouse(true)
-		    modelHolder2:SetMovable(true)
-            MVPprint("恭喜 " .. v["key"] .. " " .. v["value"] .. " 分   【MVP】" .. "团队得分 " .. allscore)
-            break
-        end
-        CombinedFails = {}-- 不躲技能受到的伤害
-        DeathData = {}--挑战模式完成时 重置死亡次数为nil  ----jany
-        DamdgeData = {}--挑战模式完成时 重置总伤害为nil---jany
-        InterruptData = {}--打断次数
-        DispelData = {}--驱散次数
-        HealData = {}--治疗
-        deftime = {}
-        score = {}--评分
-        Battletime = {}--战斗时长
-	   
-	end
-
+	                Battletime = {}--战斗时长  
 end
 
 
