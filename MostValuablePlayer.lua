@@ -894,8 +894,6 @@ function MVPvsFrame:DeathDamage(timestamp, eventType, srcGUID, srcName, srcFlags
 		if destName and UnitHealth(dstName)==0 then--/run SendChatMessage((UnitHealth("卢瑟希"),"PARTY"))
 		DeathData[dstName] = DeathData[dstName] + 1--/run print(DeathData["卢瑟希"])
 		print(destName .. " 失去 " .. DeathData[dstName] .. " 血！")
-		else
-		print("发生了死亡事件")	
 		end
 	end
 end

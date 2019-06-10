@@ -39,7 +39,20 @@ local function colortxt(name)
                 elseif rsctekclass == "monk" then rsccodeclass = 11
                 elseif rsctekclass == "demonhunter" then rsccodeclass = 12
                 end
-                local tablecolor = {"|CFFC69B6D", "|CFFC41F3B", "|CFFF48CBA", "|CFFFFFFFF", "|CFF1a3caa", "|CFFFF7C0A", "|CFFFFF468", "|CFF68CCEF", "|CFF9382C9", "|CFFAAD372", "|CFF00FF96", "|CFFA330C9", "|cff999999"}
+                local tablecolor = {
+                    "|cFFC79C6E", --1
+                    "|CFFC41F3B", --2
+                    "|cFFF58CBA", --3
+                    "|CFFFFFFFF", --4
+                    "|cFF0070DE", --5
+                    "|CFFFF7C0A", --6
+                    "|CFFFFF569", --7
+                    "|CFF69CCF0", --8
+                    "|CFF9382C9", --9
+                    "|CFFABD473", --10
+                    "|CFF00FF96", --11
+                    "|CFFA330C9", --12
+                    "|cff999999"}
                 if rsccodeclass == 0 then
                     return "|cff999999" --для цвет петов
                 else
@@ -66,23 +79,23 @@ local function GetColor(nr, name)
             if string.find(name, "%-") then
                 realm = string.sub(name, string.find(name, "%-") + 1, -1)
             end
-
+            
             if string.find(name, "%%") then
                 name = string.sub(name, 1, string.find(name, "%%") - 1)
             end
-
+            
             local color = colortxt(name)
-
+            
             if color ~= "" then
-                 return color           
+                return color
             end
-                        
+            
             for i in pairs(MVP_Settings["MVPvscache"]) do
                 if (name == MVP_Settings["MVPvscache"][i]["oname"] and (realm == "" or realm == nil) and localrealm == MVP_Settings["MVPvscache"][i]["orealm"]) then
                     return string.sub(MVP_Settings["MVPvscache"][i]["oclass"], 1, 10)
                 end
             end
-
+            
             for i in pairs(MVP_Settings["MVPvscache"]) do
                 if (name == MVP_Settings["MVPvscache"][i]["oname"] and (realm == MVP_Settings["MVPvscache"][i]["orealm"] or realm == "" or realm == nil)) then
                     return string.sub(MVP_Settings["MVPvscache"][i]["oclass"], 1, 10)
@@ -93,47 +106,74 @@ local function GetColor(nr, name)
     end
 end
 
+local function addcolor(str1, tag, str2)
+    local strmid = string.gsub(tag, "%%%-", "-")
+    local a, b = string.find(str2, tag)
+    if string.lower(string.sub(str1, -10, -1)) ~= string.lower(GetColor(1, tag)) then
+        strmid = GetColor(1, tag) .. strmid .. "|r"
+        if string.lower(string.sub(str1, -10, -7)) == "|cff" then
+            strmid = strmid .. string.lower(string.sub(str1, -10, -1))
+        end
+    end
+    if a then
+        str2 = addcolor(string.sub(str2, 1, a - 1), tag, string.sub(str2, b + 1, -1))
+    end
+    return str1 .. strmid .. tostring(str2)
+end
+
 local psfilter = function(_, event, msg, player, ...)
     if friends == {} then
         return false
     else
-        local chanid, found, modify = select(5, ...), 0, nil
         for i = 1, #(friends) do
-            local tag = friends[i]
-            if string.find(msg, tag) then
-                msg, found = string.gsub(msg, tag, GetColor(1, tag) .. tag .. GetColor(2, tag))
-                msg = string.gsub(msg, "|r%-", "%-")
-                if found > 0 then modify = true end
+            tag = friends[i]
+            a, b = string.find(msg, tag)
+            if a then
+                msg = addcolor(string.sub(msg, 1, a - 1), tag, string.sub(msg, b + 1, -1))
+            end
+            if string.find(msg,"|Hplayer:.+"..tag.."|r|h%[.+"..tag.."|r%]|h") then
+                msg=string.gsub(msg,"|Hplayer:.+" .. tag .. "|r|h%[.+" .. tag .. "|r%]|h", "[" .. GetColor(1, tag) .. "|Hplayer:" .. tag .. "|h" .. tag .. "|h|r]")
             end
         end
-        if modify then
-            return false, msg, player, ...
-        end
+        return false, msg, player, ...
     end
 end
 
 local function ADDfilter()
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_PARTY_LEADER", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_PARTY", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID_WARNING", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID_LEADER", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_INSTANCE_CHAT", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_INSTANCE_CHAT_LEADER", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_SAY", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_YELL", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD_ITEM_LOOTED", psfilter)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_ACHIEVEMENT", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_AFK", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BG_SYSTEM_ALLIANCE", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BG_SYSTEM_HORDE", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BG_SYSTEM_NEUTRAL", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BN", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_INLINE_TOAST_ALERT", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_INLINE_TOAST_BROADCAST", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_INLINE_TOAST_BROADCAST_INFORM", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_INLINE_TOAST_CONVERSATION", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER_INFORM", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER_PLAYER_OFFLINE", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL_JOIN", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL_LEAVE", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL_LIST", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL_NOTICE", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL_NOTICE_USER", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_FACTION_CHANGE", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_GAIN", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_MISC_INFO", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_XP_GAIN", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_COMMUNITIES_CHANNEL", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_CURRENCY", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_DND", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_EMOTE", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_FILTERED", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD_ACHIEVEMENT", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD_ITEM_LOOTED", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_IGNORED", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_INSTANCE_CHAT", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_INSTANCE_CHAT_LEADER", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_LOOT", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_MONEY", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_MONSTER_EMOTE", psfilter)
@@ -141,10 +181,28 @@ local function ADDfilter()
     ChatFrame_AddMessageEventFilter("CHAT_MSG_MONSTER_SAY", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_MONSTER_WHISPER", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_MONSTER_YELL", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_OFFICER", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_OPENING", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_PARTY", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_PARTY_LEADER", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_PET_BATTLE_COMBAT_LOG", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_PET_BATTLE_INFO", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_PET_INFO", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID_BOSS_EMOTE", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID_BOSS_WHISPER", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID_LEADER", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID_WARNING", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_RESTRICTED", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_SAY", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_SKILL", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_TARGETICONS", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_TEXT_EMOTE", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_TRADESKILLS", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", psfilter)
     ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER_INFORM", psfilter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_YELL", psfilter)
 end
 
 local function addfriends()
