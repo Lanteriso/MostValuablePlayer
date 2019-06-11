@@ -641,7 +641,7 @@ function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event, ...)--挑战模式完成时
 	                
 	                for k, v in pairs(fs) do
 						playerModel2:ClearModel()
-						playerModel2:SetUnit(guname)
+						playerModel2:SetUnit(v["key"])
 						playerModel2:SetFacing(6.5)
 						playerModel2:SetPortraitZoom(0.05)
 						playerModel2:SetCamDistanceScale(4.8)
@@ -697,7 +697,7 @@ function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event, ...)--挑战模式完成时
         table.sort(fs, compareMVP)
         for k, v in pairs(fs) do
 			playerModel2:ClearModel()
-			playerModel2:SetUnit(guname)
+			playerModel2:SetUnit(v["key"])
 			playerModel2:SetFacing(6.5)
 			playerModel2:SetPortraitZoom(0.05)
 			playerModel2:SetCamDistanceScale(4.8)
