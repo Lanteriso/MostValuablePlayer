@@ -106,17 +106,28 @@ local function GetColor(nr, name)
     end
 end
 
+local function substringend(str, k)
+    local ts = string.reverse(str)
+    k = string.reverse(k)
+    _, i = string.find(ts, k)
+    if i then
+        m = string.len(ts) - i + 1
+        return string.sub(str, m + 10, -1)
+    end
+    return "|r"
+end
+
 local function addcolor(str1, tag, str2)
     local strmid = string.gsub(tag, "%%%-", "-")
-    local a, b = string.find(str2, tag)
-    if string.lower(string.sub(str1, -10, -1)) ~= string.lower(GetColor(1, tag)) then
-        strmid = GetColor(1, tag) .. strmid .. "|r"
-        if string.lower(string.sub(str1, -10, -7)) == "|cff" then
-            strmid = strmid .. string.lower(string.sub(str1, -10, -1))
-        end
+    local str1end = substringend(string.lower(str1), "|cff")
+    local stra, strb = string.find(str1end, "|r")
+    if stra then
+        strmid = GetColor(1, tag) .. strmid .. "|r" --处理tag  将tag染色
+    
     end
-    if a then
-        str2 = addcolor(string.sub(str2, 1, a - 1), tag, string.sub(str2, b + 1, -1))
+    local a, b = string.find(str2, tag)--查看后续还有没有tag
+    if a then --如果有
+        str2 = addcolor(string.sub(str2, 1, a - 1), tag, string.sub(str2, b + 1, -1))--对后续部分继续染色
     end
     return str1 .. strmid .. tostring(str2)
 end
