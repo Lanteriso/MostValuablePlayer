@@ -1,8 +1,4 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
-
 	
-	<Include file="Chat\Load_Chat.xml"/>
-
-	
-
+	<Script file='Chat.lua'/>
 </Ui>

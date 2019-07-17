@@ -2832,6 +2832,7 @@ orp["Heroic"]={};
 orp["Mythic"]={};
 
 function OGetRaidProgression(RaidName, OSTAT, NumRaidBosses)
+
 	local i=0;
 	local omatch=false; -- check if some word repeat
 	local twohighest=0;
@@ -2843,9 +2844,13 @@ function OGetRaidProgression(RaidName, OSTAT, NumRaidBosses)
 	orp["Normal"]={};
 	orp["Heroic"]={};
 	orp["Mythic"]={};
+
 	orp["unitname"], orp["unitid"] = GameTooltip:GetUnit();
 	orp["oframe"] = GameTooltip:GetOwner();
-	if rpunit == "" or not UnitExists("target") or not CheckInteractDistance("target", 1) or orp["oframe"] == nil then
+	
+
+	if rpunit == "" or not UnitExists("target") and not UnitExists("mouseover") or not CheckInteractDistance("target", 1) and not CheckInteractDistance("mouseover", 1) or orp["oframe"] == nil then
+
 		OILVL:UnregisterEvent("INSPECT_ACHIEVEMENT_READY");
 		--ClearAchievementComparisonUnit();
 		rpsw=false;
@@ -2933,7 +2938,7 @@ function OGetRaidProgression(RaidName, OSTAT, NumRaidBosses)
 		orp["LFR"][i] = GetComparisonStatistic(OSTAT[i][1]);
 	end
 	if op > 0 and twohighest < 2 then
-		progression=progression.."|cFF00FF00"..op.."/"..NumRaidBosses.." |r|cFFFFFFFF"..PLAYER_DIFFICULTY3.." ";
+		progression=progression.."|cFF00FF00"..op.."/"..NumRaidBosses.." |r|cFFFFFFFF".."进度".." ";
 		twohighest = twohighest + 1
 	end
 	if twohighest == 0 then
@@ -2942,7 +2947,8 @@ function OGetRaidProgression(RaidName, OSTAT, NumRaidBosses)
 	if not omatch then
 		if progression ~= "" then
 			GameTooltip:SetHeight(GameTooltip:GetHeight()+15);
-			GameTooltip:AddLine(progression);
+			--GameTooltip:AddLine(progression);
+			GameTooltip:AddLine("|cFF00FF00"..orp["LFR"][1].."次");
 		end
 	else
 		_G["GameTooltipTextLeft"..matchi]:SetText(progression);
@@ -2951,6 +2957,10 @@ function OGetRaidProgression(RaidName, OSTAT, NumRaidBosses)
 	--ClearAchievementComparisonUnit();
 	rpsw=false;
 	rpunit="";
+
+	--保存大秘数据
+
+	cfg.MVPvschallenge[GetUnitName(orp["unitid"],true)] = {["大秘境"]=orp["LFR"][1]}
 
 	-- Show raid progression on tooltip:
 	if cfg.MVPvsrpdetails then
@@ -2971,9 +2981,9 @@ function OGetRaidProgression(RaidName, OSTAT, NumRaidBosses)
 		line = otooltip:AddHeader()
 		line = otooltip:SetCell(line, 1, NAME)
 		line = otooltip:SetCell(line, 2, PLAYER_DIFFICULTY6)
-		line = otooltip:SetCell(line, 3, "--")
-		line = otooltip:SetCell(line, 4, "--")
-		line = otooltip:SetCell(line, 5, "--")
+		line = otooltip:SetCell(line, 3, "分数")
+		line = otooltip:SetCell(line, 4, "传奇")
+		line = otooltip:SetCell(line, 5, "积分")
 		otooltip:AddSeparator()
 
 		for m = 1, NumRaidBosses do
@@ -3329,7 +3339,7 @@ function OGetRaidProgression2(RaidName, OSTAT, NumRaidBosses)
 				if orpd ~= "" then SendChatMessage(orpd..OSTAT[m][5], "RAID"); end
 			end
 		end)
-		line = otooltip2:SetCell(line, 3, "--")--普通
+		line = otooltip2:SetCell(line, 3, "分数")--普通
 		otooltip2:SetCellScript(line, 3, "OnMouseUp", function()
 			local xprog = 0
 			for m = 1, NumRaidBosses do	if orp["Normal"][m] ~= "--" then xprog = xprog + 1 end	end
@@ -3340,7 +3350,7 @@ function OGetRaidProgression2(RaidName, OSTAT, NumRaidBosses)
 				if orpd ~= "" then SendChatMessage(orpd..OSTAT[m][5], "RAID"); end
 			end
 		end)
-		line = otooltip2:SetCell(line, 4, "--")
+		line = otooltip2:SetCell(line, 4, "传奇")
 		otooltip2:SetCellScript(line, 4, "OnMouseUp", function()--英雄
 			local xprog = 0
 			for m = 1, NumRaidBosses do	if orp["Heroic"][m] ~= "--" then xprog = xprog + 1 end	end
@@ -3351,7 +3361,7 @@ function OGetRaidProgression2(RaidName, OSTAT, NumRaidBosses)
 				if orpd ~= "" then SendChatMessage(orpd..OSTAT[m][5], "RAID"); end
 			end
 		end)
-		line = otooltip2:SetCell(line, 5, "--")--史诗
+		line = otooltip2:SetCell(line, 5, "积分")--史诗
 
 		otooltip2:SetCellScript(line, 5, "OnMouseUp", function()
 			local xprog = 0
@@ -3364,6 +3374,8 @@ function OGetRaidProgression2(RaidName, OSTAT, NumRaidBosses)
 			end
 		end)
 
+		--存大秘数据
+		cfg.MVPvschallenge[GetUnitName(orp["unitid"],true)] = {["大秘境"]=orp["LFR"][1]}
 
 		otooltip2:AddSeparator()
 
@@ -3803,7 +3815,7 @@ function OGetRaidProgression3(RaidName, OSTAT, NumRaidBosses)
 				if orpd ~= "" then SendChatMessage(orpd..OSTAT[m][5], "RAID"); end
 			end
 		end)
-		line = otooltip2:SetCell(line, 3, "--")
+		line = otooltip2:SetCell(line, 3, "分数")
 		otooltip2:SetCellScript(line, 3, "OnMouseUp", function()
 			local xprog = 0
 			for m = 1, NumRaidBosses do	if orp["Normal"][m] ~= "--" then xprog = xprog + 1 end	end
@@ -3814,7 +3826,7 @@ function OGetRaidProgression3(RaidName, OSTAT, NumRaidBosses)
 				if orpd ~= "" then SendChatMessage(orpd..OSTAT[m][5], "RAID"); end
 			end
 		end)
-		line = otooltip2:SetCell(line, 4, "--")
+		line = otooltip2:SetCell(line, 4, "传奇")
 		otooltip2:SetCellScript(line, 4, "OnMouseUp", function()
 			local xprog = 0
 			for m = 1, NumRaidBosses do	if orp["Heroic"][m] ~= "--" then xprog = xprog + 1 end	end
@@ -3825,7 +3837,7 @@ function OGetRaidProgression3(RaidName, OSTAT, NumRaidBosses)
 				if orpd ~= "" then SendChatMessage(orpd..OSTAT[m][5], "RAID"); end
 			end
 		end)
-		line = otooltip2:SetCell(line, 5, "--")
+		line = otooltip2:SetCell(line, 5, "积分")
 		otooltip2:SetCellScript(line, 5, "OnMouseUp", function()
 			local xprog = 0
 			for m = 1, NumRaidBosses do	if orp["Mythic"][m] ~= "--" then xprog = xprog + 1 end	end
@@ -3836,6 +3848,10 @@ function OGetRaidProgression3(RaidName, OSTAT, NumRaidBosses)
 				if orpd ~= "" then SendChatMessage(orpd..OSTAT[m][5], "RAID"); end
 			end
 		end)
+		--存大秘数据
+		
+		cfg.MVPvschallenge[GetUnitName(orp["unitid"],true)] = {["大秘境"]=orp["LFR"][1]}
+
 		otooltip2:AddSeparator()
 		for m = 1, NumRaidBosses do
 			line = otooltip2:AddLine()
@@ -4130,7 +4146,7 @@ function otooltip6func()
 	end
 	--collectgarbage()
 	if LibQTip:IsAcquired("Oraidprog") or otooltip2 then
-		otooltip2:Clear()
+		otooltip2:Clear()--1x MostValuablePlayer\MVPvs.lua:4149: attempt to index upvalue 'otooltip2' (a nil value)
 		otooltip2:Hide()
 		LibQTip:Release(otooltip2)
 		otooltip2 = nil
@@ -5378,6 +5394,7 @@ end
 
 local LastInspectATime = GetTime()
 function events:INSPECT_ACHIEVEMENT_READY(...)
+
 	if not UnitAffectingCombat("player")  and GetTime() - LastInspectATime > 2.5 then
 		if cfg.MVPvsms then
 			if Omover2 == 1 then
@@ -5407,7 +5424,9 @@ function events:INSPECT_ACHIEVEMENT_READY(...)
 					Omover2=0;
 				end
 			else
-				if UnitExists("target") and CheckInteractDistance("target", 1)  and rpsw then
+				if UnitExists("mouseover") and CheckInteractDistance("mouseover", 1)  and rpsw then
+					if cfg.raidmenuid == 1 then OGetRaidProgression(ULDname, OSTATULD, 11); end
+				elseif UnitExists("target") and CheckInteractDistance("target", 1)  and rpsw then
 					if cfg.raidmenuid == 1 then OGetRaidProgression(ULDname, OSTATULD, 11); end
 					-- if cfg.raidmenuid == 4 then OGetRaidProgression(TOVname, OSTATTOV, 3); end
 					-- if cfg.raidmenuid == 3 then OGetRaidProgression(TNname, OSTATTN, 10); end
@@ -5514,6 +5533,7 @@ function events:PLAYER_LOGIN(...)
 	if cfg.MVPvssamefaction == nil then cfg.MVPvssamefaction = false end
 	if cfg.MVPvsbagilvl == nil then cfg.MVPvsbagilvl = true end
 	if cfg.MVPvscolormatchitemrarity == nil then cfg.MVPvscolormatchitemrarity = true end
+	if cfg.MVPvschallenge == nil then cfg.MVPvschallenge = {}; end  -- 大米数据
 	OilvlConfigFrame();
 	oilvlframe();
 	OVILRefresh();
@@ -5565,6 +5585,12 @@ function events:PLAYER_LOGIN(...)
 			local oname, _ = GameTooltip:GetUnit()
 			if oname ~= nil then oname = oname:gsub("%-.+", ""); else return -1; end
 			if  oname == GetUnitName("target",""):gsub("%-.+", "") then
+				OMouseover();
+			end
+		elseif not UnitAffectingCombat("player")  and cfg.MVPvsms and UnitExists("mouseover") and not IsInRaid() and not IsInGroup(LE_PARTY_CATEGORY_INSTANCE) and not IsInGroup(LE_PARTY_CATEGORY_HOME) then
+			local oname, _ = GameTooltip:GetUnit()
+			if oname ~= nil then oname = oname:gsub("%-.+", ""); else return -1; end
+			if  oname == GetUnitName("mouseover",""):gsub("%-.+", "") then
 				OMouseover();
 			end
 		end
@@ -5734,15 +5760,31 @@ end
 
 -- Set GameTooltip
 function OMouseover()
+	
 	if InspectFrame and (InspectFrame.unit or InspectFrame:IsShown()) then return -1 end
-	if not UnitExists("target") or not CheckInteractDistance("target", 1) then
+	if CheckInteractDistance("mouseover", 1) and CanInspect("mouseover") then
+		if not cfg.MVPvssamefaction then
+			OILVL:RegisterEvent("INSPECT_READY");
+			NotifyInspect("mouseover");
+			Omover=1;
+			if not rpsw then
+				ClearAchievementComparisonUnit();
+				OILVL:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
+				SetAchievementComparisonUnit("mouseover");
+				rpunit = "mouseover";
+				rpsw=true;
+			end
+		end
+	
+	elseif not UnitExists("target") or not CheckInteractDistance("target", 1) then
 		OILVL:UnregisterEvent("INSPECT_ACHIEVEMENT_READY");
 		--ClearAchievementComparisonUnit();
 		rpsw=false;
 		rpunit="";
-		Omover2 = 0;
+		Omover2 = 0;	
 		return -1;
 	end
+
 	if InspectFrame and InspectFrame.unit then return -1 end
 	if not UnitAffectingCombat("player")  and cfg.MVPvsms and oilvlframesw then
 		if CheckInteractDistance("target", 1) and CanInspect("target") then
@@ -5774,6 +5816,7 @@ function OMouseover()
 			end
 		end
 	end
+
 end
 
 function OilvlRaidMenu()

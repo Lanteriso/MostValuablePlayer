@@ -1,30 +1,16 @@
 ## Interface: 80100
 ## Title: MostValuablePlayer
 ## Author: JANY
-## Version: 8.1.5
+## Version: 8.2.0
 ## Notes: MostValuablePlayer
 ## SavedVariables: MVP_Settings,MVPLilst
-## X-Curse-Packaged-Version: v8.1.5 BFA
+## X-Curse-Packaged-Version: v8.2.0 BFA
 ## X-Curse-Project-Name: MostValuablePlayer
 ## X-Curse-Project-ID: MostValuablePlayer
 ## X-Curse-Repository-ID: MostValuablePlayer
 ## OptionalDeps: LibStub, LibUIDropDownMenu
 
-embeds.xml
-
-localization.lua
 MostValuablePlayer.lua
-
-libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
-libs\AceAddon-3.0\AceAddon-3.0.xml
-libs\AceTimer-3.0\AceTimer-3.0.xml
-libs\LibQTip-1.0\lib.xml
-libs\LibDataBroker\LibDataBroker-1.1.lua
-libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
-
-Modules\Load_Modules.xml
-
 MVPconfig.lua
-MVPvs.lua
-MVPlayer.lua
+
 

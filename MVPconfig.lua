@@ -1,7 +1,7 @@
 MVP_Settings = {}
 
 local cfg = MVP_Settings -- so you don't have to edit the rest
-
+--[[
 -- default value if 1st use
 cfg.MVPvsframeP = "TOPLEFT";
 cfg.MVPvsframeX = 22;
@@ -9,7 +9,7 @@ cfg.MVPvsframeY = -140;
 cfg.MVPvsscale = 0.8;
 cfg.MVPvsalpha = 1;
 cfg.raidmenuid = 1;
-cfg.MVPvsms = false; -- mouse scanning for target and raid progression
+cfg.MVPvsms = true; -- mouse scanning for target and raid progression
 cfg.MVPvsme = false; -- enchant and gem reminder
 cfg.MVPvsme2 = false; -- best enchant and gem reminder
 cfg.MVPvscharilvl = false; -- Char Frame item level
@@ -28,6 +28,9 @@ cfg.MVPvsautoscan = true; -- auto scan ilvl
 cfg.MVPvssamefaction = false; -- show ilvl of target for same faction only
 cfg.MVPvsbagilvl = false; -- show item level of gear in bag
 cfg.MVPvscolormatchitemrarity = true; -- item level color follow the color of item rarity
-
+]]
 cfg.MVPvsnoti = true; -- 通报MVP
 cfg.MVPvsline = true; -- 鼠标提示MVP
+cfg.MVPvschallenge = {}; -- 大米数据
+
+cfg.MVPPoint = {};--3d模型位置
