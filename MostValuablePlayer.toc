@@ -1,16 +1,25 @@
-## Interface: 80100
+## Interface: 80205
 ## Title: MostValuablePlayer
 ## Author: JANY
-## Version: 8.2.0
-## Notes: MostValuablePlayer
+## Version: 8.2.5
+## Notes: MostValuablePlayer-20191215
 ## SavedVariables: MVP_Settings,MVPLilst
-## X-Curse-Packaged-Version: v8.2.0 BFA
+## X-Curse-Packaged-Version: v8.2.5 BFA
 ## X-Curse-Project-Name: MostValuablePlayer
 ## X-Curse-Project-ID: MostValuablePlayer
 ## X-Curse-Repository-ID: MostValuablePlayer
 ## OptionalDeps: LibStub, LibUIDropDownMenu
 
+
+
+localization.lua
 MostValuablePlayer.lua
+
+
+Modules\Load_Modules.xml
+
 MVPconfig.lua
+
+
 
 

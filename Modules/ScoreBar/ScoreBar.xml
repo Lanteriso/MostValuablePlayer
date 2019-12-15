@@ -1,0 +1,39 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+    <Script file="config.lua"/>
+    <Script file="utils.lua"/>
+    <Script file="core.lua"/>
+
+    <Frame name="ScoreFrame" parent="UIParent">
+    </Frame>
+    <Frame name="P1Score" parent="ScoreFrame">
+        <Scripts>
+            <OnLoad function="P1Score_OnLoad" />
+            <OnEvent function="P1Score_OnEvent" />
+        </Scripts>
+	</Frame>
+    <Frame name="P2Score" parent="ScoreFrame">
+        <Scripts>
+            <OnLoad function="P2Score_OnLoad" />
+            <OnEvent function="P2Score_OnEvent" />
+        </Scripts>
+    </Frame>
+    <Frame name="P3Score" parent="ScoreFrame">
+        <Scripts>
+            <OnLoad function="P3Score_OnLoad" />
+            <OnEvent function="P3Score_OnEvent" />
+        </Scripts>
+    </Frame>
+    <Frame name="P4Score" parent="ScoreFrame">
+        <Scripts>
+            <OnLoad function="P4Score_OnLoad" />
+            <OnEvent function="P4Score_OnEvent" />
+        </Scripts>
+    </Frame>
+    <Frame name="P5Score" parent="ScoreFrame">
+        <Scripts>
+            <OnLoad function="P5Score_OnLoad" />
+            <OnEvent function="P5Score_OnEvent" />
+        </Scripts>
+    </Frame>
+</Ui>

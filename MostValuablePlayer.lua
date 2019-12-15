@@ -19,6 +19,7 @@ local DamdgeData = {}--JANY用来记录一次副本里的总伤害量
 local InterruptData = {}--打断次数
 local DispelData = {}--驱散
 local score = {}--评分
+local jscore = {}--即时评分
 local Battletime= {}--战斗时长
 local HealData = {} -- 治疗
 local deftime = {}
@@ -279,6 +280,8 @@ MVPvsFrame.text:SetTextHeight(13)
 MVPvsFrame:SetAlpha(1)
 
 local function ShowMVP(theunit)
+	if not cfg.MVPSettings["3d模型显示"] then return end
+	if modelHolder2 then print("-----------") end
 	local theunit = theunit
 	local modelHolder2 = CreateFrame("Frame", nil,UIParent)
 	modelHolder2:SetSize(512,512)
@@ -288,6 +291,7 @@ local function ShowMVP(theunit)
 	modelHolder2:SetPropagateKeyboardInput(true)
 	modelHolder2:SetPoint(cfg.MVPPoint["Point"],UIParent,cfg.MVPPoint["Relay"],cfg.MVPPoint["X"], cfg.MVPPoint["Y"])
 	modelHolder2:Show()	
+
 
 
 	local playerModel2 = CreateFrame("PlayerModel", nil, modelHolder2)
@@ -312,6 +316,24 @@ local function ShowMVP(theunit)
         	end
         	--]]   
     end)
+
+    	--------------关闭按钮-------------------
+	local close = CreateFrame("Button", nil, modelHolder2, "UIPanelCloseButton")
+	close:SetPoint("TOPRIGHT", 2, 1)
+	close:SetScript("OnClick", function(self, ...)
+		cfg.MVPPoint["Point"],_,cfg.MVPPoint["Relay"],cfg.MVPPoint["X"],cfg.MVPPoint["Y"]=modelHolder2:GetPoint()
+		modelHolder2:EnableMouse(false)
+	    modelHolder2:SetMovable(false)
+		playerModel2:SetUnit("none")
+		modelHolder2:SetBackdropColor(0, 0, 0, 0)
+		playerModel2:EnableMouseWheel(false);
+        modelHolder2:SetPropagateKeyboardInput(false)
+        modelHolder2:Hide()
+
+        tickers:Cancel() 
+	end)
+	--------------关闭按钮-------------------
+	
 	modelHolder2:SetScript("OnMouseDown", modelHolder2.StartMoving)
 	modelHolder2:SetScript("OnMouseUp", modelHolder2.StopMovingOrSizing)
 	modelHolder2:SetScript("OnKeyDown", function(self,key)
@@ -374,27 +396,22 @@ function generateMaybeOutput(user)
 					minPct = spellMinPct
 				end
 				amount = amount + v
-				--print("损失血量为 " .. amount)
 			end
 			if minPct == math.huge then
 				local spellNames = " "
 				for k,v in pairs(TimerData[user]) do
 					spellNames = spellNames..GetSpellLink(k).." "
 				end
-				--print("<友情提示> Error: Could not find spells"..spellNames.."in Spells or SpellsNoTank but got Timer for them. wtf")
+				print("<友情提示> Error: Could not find spells"..spellNames.."in Spells or SpellsNoTank but got Timer for them. wtf")
 			end
 			TimerData[user] = nil
 			Timers[user] = nil
 			local userMaxHealth = UnitHealthMax(user)
 			local msgAmount = round(amount/10000 ,1)
 			local pct = Round(amount / userMaxHealth * 100)
-			--print(user,msg,amount)
-			msg = msg.."命中,减 "..msgAmount.."万血 (-"..pct.."%)."
-			--print(msg)
-
 			if pct >= hardMinPct and pct >= minPct and MVPDB then--这个判断
-				--msg = msg.."损失血量为 "..msgAmount.."万 (-"..pct.."%)."
-				--print(msg)
+				msg = msg.."损失血量为 "..msgAmount.."万 (-"..pct.."%)."
+				J_maybeSendChatMessage(msg)
 			end
 		end
 	return func
@@ -415,12 +432,9 @@ end
 ----------------------鼠标提示相关------------------
 local function addLine(tooltip, id, kind,guname)
 
-	if cfg.MVPvsline == true and cfg.MVPvsline ~= true then
+	if cfg.MVPSettings["鼠标提示MVP"] and false then
 		ShowMVP("player")
 	end
-
-
-
 
 	if not id or id == "" then return end
 	if type(id) == "table" and #id == 1 then id = id[1] end
@@ -433,7 +447,7 @@ local function addLine(tooltip, id, kind,guname)
 		if text and string.find(text, kind .. ":") then return end
 	end
 
-	if cfg.MVPvsline == true then
+	if cfg.MVPSettings["鼠标提示MVP"] == true then
 	if MVPLilst[guname] then tooltip:AddDoubleLine(MVPLilst[guname]) end
 	if cfg.MVPvschallenge[guname] then tooltip:AddDoubleLine("大秘境|cFF00FF00"..cfg.MVPvschallenge[guname]["大秘境"]) end
 		tooltip:Show()
@@ -454,6 +468,9 @@ GameTooltip:HookScript("OnTooltipSetUnit", function(self)
     end
   end
 end)
+
+
+
 ----------------------鼠标提示相关------------------
 
 function maybeSendAddonMessage(prefix, message)
@@ -465,28 +482,30 @@ function maybeSendAddonMessage(prefix, message)
 end
 function MVPprint(messages)
 	if activeUser ~= playerUser then
-		print(messages)
 		return
 	end
-	if cfg.MVPvsnoti == true then
+	if cfg.MVPSettings["通报MVP"] == true then
 		SendChatMessage(messages,"PARTY")
 	else
 		print(messages)
 	end
 end
-function maybeSendChatMessage(message)
-	if activeUser ~= playerUser then
+function J_maybeSendChatMessage(message)
+	if activeUser ~= playerUser and cfg.MVPSettings["毒瘤通报开关"] == true then
 		return
 	end
-	if IsInGroup() and not IsInGroup(2) and not IsInRaid() then
+	if cfg.MVPSettings["毒瘤通报-自己/队伍"] == false then
 		print(message)
-		--SendChatMessage(message,"PARTY")
-	elseif IsInGroup() and not IsInGroup(2) and IsInRaid() then
-		--SendChatMessage(message,"RAID")
-		print(message)
-	else
-		--SendChatMessage(message,"YELL")
-		print(message)
+	elseif cfg.MVPSettings["毒瘤通报-自己/队伍"] == true and IsInGroup() and not IsInGroup(2) then
+		SendChatMessage(message,"PARTY")
+	elseif cfg.MVPSettings["毒瘤通报-自己/队伍"] == true and IsInGroup() and not IsInGroup(2) and IsInRaid() then
+		SendChatMessage(message,"RAID")
+	elseif cfg.MVPSettings["毒瘤通报-自己/队伍"] == true then
+		if IsInGroup() and not IsInGroup(2) and not IsInRaid() then
+			SendChatMessage(message,"PARTY")
+		elseif IsInGroup() and not IsInGroup(2) and IsInRaid() then
+			SendChatMessage(message,"RAID")
+		end
 	end
 end
 
@@ -527,20 +546,29 @@ function MVPvsFrame:ADDON_LOADED(event,addon)
 	if cfg.MVPPoint["Scale"] == nil then cfg.MVPPoint["Scale"] = 1; end
 
 
+	if cfg.MVPvsShowMVP == nil then cfg.MVPvsShowMVP = true; end--3d模型显示
+	if cfg.MVPvsSimplify == nil then cfg.MVPvsSimplify = false; end--简化通报
 
+	if cfg.MVPSettings == nil then cfg.MVPSettings = {}; end
+	if cfg.MVPSettings["通报MVP"] == nil then cfg.MVPSettings["通报MVP"] = true; end
+	if cfg.MVPSettings["鼠标提示MVP"] == nil then cfg.MVPSettings["鼠标提示MVP"] = true; end
+	if cfg.MVPSettings["3d模型显示"] == nil then cfg.MVPSettings["3d模型显示"] = true; end
+	if cfg.MVPSettings["简化通报"] == nil then cfg.MVPSettings["简化通报"] = false; end
+	if cfg.MVPSettings["毒瘤通报开关"] == nil then cfg.MVPSettings["毒瘤通报开关"] = true; end
+	if cfg.MVPSettings["毒瘤通报-自己/队伍"] == nil then cfg.MVPSettings["毒瘤通报-自己/队伍"] = false; end
 end
 
 function MVPvsFrame:GROUP_ROSTER_UPDATE(event,...)
 	MVPvsFrame:RebuildTable()
-	SendData()
+	--SendData()--共享数据暂时关闭
 end
 
 function MVPvsFrame:ZONE_CHANGED_NEW_AREA(event,...)
 	MVPvsFrame:RebuildTable()
-	SendData()
+	--SendData()--共享数据暂时关闭
 end
 
-function SendData()
+function SendData2()
 	for k, v in pairs(MVPLilst) do	
 		maybeSendAddonMessage(MSG_PREFIX,k..","..v)
 	end	
@@ -605,11 +633,39 @@ local function GetKeyStoneData()
         print(format("|cff33ff99<%s>|r |cffff2020%s|r", "MVP", format("很遗憾你超时完成了 %s 的战斗。共耗时 %s，超出规定时间 %s。", name, timeFormatMS(time), timeFormatMS(time - timeLimit))))
         RemainingTime = timeFormats(time - timeLimit) * -1
     end
-    
-    MVPprint(name .. level .. "层    玩家         伤害           额外受伤        治疗     打断   驱散   阵亡      评分")
+    if cfg.MVPSettings["简化通报"] then 
+    	MVPprint(name .. level .. "层       评分")
+    else
+    	MVPprint(name .. level .. "层    玩家         伤害           额外受伤        治疗     打断   驱散   阵亡      评分")
+	end
     return name,level,RemainingTime,keystoneUpgradeLevels
 end
 
+
+local ssc = {}
+function GetScoreData()
+	local maxscore = 0
+    for k, v in pairs(DamdgeData) do
+        if not v then v = 0 end
+        if not CombinedFails[k] then CombinedFails[k] = 0 end
+        if not InterruptData[k] then InterruptData[k] = 0 end
+        if not DispelData[k] then DispelData[k] = 0 end
+        if not DeathData[k] then DeathData[k] = 0 end
+        if not HealData[k] then HealData[k] = 0 end
+        if not score[k] then score[k] = 0 end
+
+        score[k] = round((v + HealData[k] - CombinedFails[k] * 3) / 100000, 1) + InterruptData[k] + DispelData[k] - DeathData[k] * 3
+        if score[k]>maxscore then
+        	maxscore = score[k]
+    	end
+    end
+    --[[
+    ssc = {}
+    for k, v in pairs(score) do table.insert(ssc, {key = k, value = v}) end
+   	table.sort(ssc, compareMVP)
+    ]]
+    return score,maxscore
+end
 local function GetMVPData(name,level,RemainingTime,keystoneUpgradeLevels)
     local allscore = 0
     for k, v in pairs(DamdgeData) do
@@ -626,11 +682,13 @@ local function GetMVPData(name,level,RemainingTime,keystoneUpgradeLevels)
     end
     
     for k, v in pairs(DamdgeData) do
-
-        
-   		MVPLilst[k] = name .. level .. "层" .. "【+" .. keystoneUpgradeLevels .. "】" .. allscore .. "团队分 " .. score[k] .. "个人分 " .. (allscore / 5) .. "平均分\n|r " .. round((v/Battletime[k])/10000,2).."秒伤 "  .. round(v / 10000, 1) .. "伤害 " .. round(CombinedFails[k] / 10000, 1) .. "受伤 " .. round(HealData[k] / 10000, 1) .. "疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 "
-        MVPprint(k .." ".. round(v / 10000, 1) .. "伤害 " .. round(CombinedFails[k] / 10000, 1) .. "受伤 " .. round(HealData[k] / 10000, 1) .. "疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 " .. score[k] .. "分")--总伤害量 额外受伤 死亡次数  打断次数
-        
+    	if cfg.MVPSettings["简化通报"] then 
+   			MVPLilst[k] = name .. level .. "层" .. "【+" .. keystoneUpgradeLevels .. "】" .. allscore .. "团队分 " .. score[k] .. "个人分 " .. (allscore / 5) .. "平均分\n|r " .. round((v/Battletime[k])/10000,2).."秒伤 "  .. round(v / 10000, 1) .. "伤害 " .. round(CombinedFails[k] / 10000, 1) .. "受伤 " .. round(HealData[k] / 10000, 1) .. "疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 "
+        	MVPprint(k .." ".. score[k] .. "分")--总伤害量 额外受伤 死亡次数  打断次数
+    	else
+    		MVPLilst[k] = name .. level .. "层" .. "【+" .. keystoneUpgradeLevels .. "】" .. allscore .. "团队分 " .. score[k] .. "个人分 " .. (allscore / 5) .. "平均分\n|r " .. round((v/Battletime[k])/10000,2).."秒伤 "  .. round(v / 10000, 1) .. "伤害 " .. round(CombinedFails[k] / 10000, 1) .. "受伤 " .. round(HealData[k] / 10000, 1) .. "疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 "
+        	MVPprint(k .." ".. round(v / 10000, 1) .. "伤害 " .. round(CombinedFails[k] / 10000, 1) .. "受伤 " .. round(HealData[k] / 10000, 1) .. "疗 " .. InterruptData[k] .. "断 " .. DispelData[k] .. "驱 " .. DeathData[k] .. "亡 " .. score[k] .. "分")--总伤害量 额外受伤 死亡次数  打断次数   		
+    	end  
     end
     local fs = {}
     for k, v in pairs(score) do table.insert(fs, {key = k, value = v}) end
@@ -641,6 +699,7 @@ local function GetMVPData(name,level,RemainingTime,keystoneUpgradeLevels)
         break
     end
 end
+
 local function DataInitializations()
     CombinedFails = {}-- 不躲技能受到的伤害
     DeathData = {}--挑战模式完成时 重置死亡次数为nil  ----jany
@@ -650,6 +709,7 @@ local function DataInitializations()
     HealData = {}--治疗
     deftime = {}
     score = {}--评分
+    jscore = {}
     Battletime = {}--战斗时长
 end
 function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event, ...)--挑战模式完成时
@@ -830,7 +890,8 @@ function MVPvsFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags
 		end
 		DamdgeData[srcName] = DamdgeData[srcName] + aAmount	
 		--print(srcName,DamdgeData[srcName])
-    
+
+
 	
   	elseif isPartyPet(srcGUID) then--宠物是否是在队伍里的----宠物伤害统计
     -- get owner
@@ -840,6 +901,9 @@ function MVPvsFrame:SpellDamage(timestamp, eventType, srcGUID, srcName, srcFlags
 		end
 		DamdgeData[ownerName] = DamdgeData[ownerName] + aAmount	
     end
+
+    
+
 end
 
 --死亡事件JANY
@@ -888,7 +952,13 @@ function MVPvsFrame:DISPELDamage(timestamp, eventType, hideCaster, srcGUID, srcN
 		else
 		print("发生了驱散事件")	
 		end
-
+	elseif isPartyPet(srcGUID) then--宠物是否是在队伍里的----宠物驱散
+    	local ownerGUID, ownerName = getPetOwnerGUID(srcGUID), getPetOwnerName(srcGUID)
+    	if DispelData[ownerName] == nil then
+			DispelData[ownerName] = 0
+		end
+		--print(ownerName.."宠物驱散+1  测试")
+		DispelData[ownerName] = DispelData[ownerName] + 1
 	end
 end
 --发生治疗事件
@@ -970,9 +1040,9 @@ end
 function MVPvsFrame:AuraApply(timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, spellSchool, auraType, auraAmount)
 	if (Auras[spellId] or (AurasNoTank[spellId] and UnitGroupRolesAssigned(dstName) ~= "TANK")) and UnitIsPlayer(dstName)  then
 		if auraAmount and MVPDB then
-			--MVPprint("<友情提示> "..dstName.." 受到伤害 "..GetSpellLink(spellId)..". "..auraAmount.." Stacks.")
+			J_maybeSendChatMessage("<友情提示> "..dstName.." 受到伤害 "..GetSpellLink(spellId)..". "..auraAmount.." Stacks.")
 		elseif MVPDB then
-			--MVPprint("<友情提示> "..dstName.." 受到伤害 "..GetSpellLink(spellId)..".")
+			J_maybeSendChatMessage("<友情提示> "..dstName.." 受到伤害 "..GetSpellLink(spellId)..".")
 		end
 	end
 end
@@ -1034,14 +1104,59 @@ end
 
 SLASH_MostValuablePlayer1, SLASH_MostValuablePlayer1 = "/mvp", "/MostValuablePlayer";
 SlashCmdList["MostValuablePlayer"] = function(msgs)
-	if cfg.MVPvsnoti==true then
+	if cfg.MVPSettings["通报MVP"]==true then
 		print("MVP关")
-
-		cfg.MVPvsnoti = false
-
+		cfg.MVPSettings["通报MVP"] = false
 	else
 		print("MVP开")
-		cfg.MVPvsnoti = true
+		cfg.MVPSettings["通报MVP"] = true
 	end
 end
 
+
+
+local MVP_OptionsFrame = CreateFrame("Frame", nil, InterfaceOptionsFramePanelContainer)
+MVP_OptionsFrame:Hide()
+MVP_OptionsFrame.name = "MostValuablePlayer(MVP)"
+MVP_OptionsFrame:SetScript("OnShow", function(self)
+	if self.show then return end
+	local J_addname = MVP_OptionsFrame:CreateFontString(nil,"ARTWORK","GameFontNormal")
+    J_addname:SetTextColor(1,1,1)
+    J_addname:SetPoint("TOP")
+    J_addname:SetFont(GameFontNormal:GetFont(), 30)
+    J_addname:SetText("MVP最佳玩家")
+    local guangao = MVP_OptionsFrame:CreateFontString(nil,"ARTWORK","GameFontNormal")
+    guangao:SetTextColor(1,1,1)
+    guangao:SetPoint("BOTTOM")
+    guangao:SetText("按ESC键可关闭通关后的3D模型显示\n作者：Jany")
+
+
+
+
+	local count,countx=0,0
+	for key,value in pairs(cfg.MVPSettings) do
+		count=count+1
+		if count>15 then countx,count=countx+1,0 end
+		local button = CreateFrame("CheckButton", "MVP_Options_"..key, MVP_OptionsFrame, "InterfaceOptionsCheckButtonTemplate")
+		button:SetPoint("TOPLEFT", 32+200*countx, -32-32*count)
+		getglobal(button:GetName().."Text"):SetText(key)
+		if value == true then button:SetChecked(true) else button:SetChecked(false) end
+	end	
+	self.show = true
+	MVP_OptionsFrame:SetScript("OnHide", function(self)
+		for key,value in pairs(cfg.MVPSettings) do
+			if _G["MVP_Options_"..key]:GetChecked() then
+				if cfg.MVPSettings[(key)] ~= true then
+					cfg.MVPSettings[(key)] = true
+					print(key,"开启")
+				end
+			else
+				if cfg.MVPSettings[(key)] ~= false then
+					cfg.MVPSettings[(key)] = false
+					print(key,"关闭")
+				end
+			end
+		end
+	end)
+end)
+InterfaceOptions_AddCategory(MVP_OptionsFrame)

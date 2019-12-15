@@ -2,6 +2,7 @@
 
 	
 	<Include file="Chat\Load_Chat.xml"/>
+	<Include file="ScoreBar\ScoreBar.xml"/>
 
 	
 
