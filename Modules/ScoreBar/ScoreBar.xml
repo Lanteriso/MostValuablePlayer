@@ -4,36 +4,85 @@
     <Script file="utils.lua"/>
     <Script file="core.lua"/>
 
-    <Frame name="ScoreFrame" parent="UIParent">
-    </Frame>
-    <Frame name="P1Score" parent="ScoreFrame">
+
+    <Frame name="ScoreFrame" parent="UIParent" enableMouse="true" movable="true">
+        <Size x="210" y="20" />
+        <Anchors>
+            <Anchor point="CENTER" x="-300" y="-300" />
+        </Anchors>
+        <Layers>
+            <Layer level="ARTWORK">
+                <FontString name="$parentText" inherits="GameFontNormal" />
+                <Texture setAllPoints="true">
+                    <Color r="0.0" g="0.0" b="0.0" a="0.5" />
+                </Texture>
+            </Layer>
+        </Layers>
         <Scripts>
-            <OnLoad function="P1Score_OnLoad" />
-            <OnEvent function="P1Score_OnEvent" />
+            <OnLoad>
+                ScoreFrame_OnLoad(self);
+            </OnLoad>
+            <OnUpdate>
+                ScoreFrame_OnUpdate(self, elapsed);
+            </OnUpdate>
+            <OnDragStart>
+                self:StartMoving();
+                self.isMoving = true;
+            </OnDragStart>
+            <OnDragStop>
+                self:StopMovingOrSizing();
+                self.isMoving = false;
+            </OnDragStop>
+        </Scripts>
+    </Frame>
+    <Frame name="P1Score" parent="ScoreFrame" >
+        <Scripts>
+            <OnLoad>
+                P2Score_OnLoad(self,0,0);
+            </OnLoad>
+            <OnEvent>
+                P2Score_OnEvent(self, event,"player", ...);
+            </OnEvent>
         </Scripts>
 	</Frame>
     <Frame name="P2Score" parent="ScoreFrame">
         <Scripts>
-            <OnLoad function="P2Score_OnLoad" />
-            <OnEvent function="P2Score_OnEvent" />
+            <OnLoad>
+                P2Score_OnLoad(self,0,-20);
+            </OnLoad>
+            <OnEvent>
+                P2Score_OnEvent(self, event,"party1", ...);
+            </OnEvent>
         </Scripts>
     </Frame>
     <Frame name="P3Score" parent="ScoreFrame">
         <Scripts>
-            <OnLoad function="P3Score_OnLoad" />
-            <OnEvent function="P3Score_OnEvent" />
+            <OnLoad>
+                P2Score_OnLoad(self,0,-40);
+            </OnLoad>
+            <OnEvent>
+                P2Score_OnEvent(self, event,"party2", ...);
+            </OnEvent>
         </Scripts>
     </Frame>
     <Frame name="P4Score" parent="ScoreFrame">
         <Scripts>
-            <OnLoad function="P4Score_OnLoad" />
-            <OnEvent function="P4Score_OnEvent" />
+            <OnLoad>
+                P2Score_OnLoad(self,0,-60);
+            </OnLoad>
+            <OnEvent>
+                P2Score_OnEvent(self, event,"party3", ...);
+            </OnEvent>
         </Scripts>
     </Frame>
     <Frame name="P5Score" parent="ScoreFrame">
         <Scripts>
-            <OnLoad function="P5Score_OnLoad" />
-            <OnEvent function="P5Score_OnEvent" />
+            <OnLoad>
+                P2Score_OnLoad(self,0,-80);
+            </OnLoad>
+            <OnEvent>
+                P2Score_OnEvent(self, event,"party4", ...);
+            </OnEvent>
         </Scripts>
     </Frame>
 </Ui>

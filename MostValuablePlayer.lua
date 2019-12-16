@@ -534,6 +534,7 @@ function MVPvsFrame:ADDON_LOADED(event,addon)
 	end
 	if not MVPLilst then MVPLilst = {} end
 	cfg = MVP_Settings;
+	
 	if cfg.MVPvsnoti == nil then cfg.MVPvsnoti = true; end
 
 	if cfg.MVPPoint == nil or cfg.MVPPoint == 0 then cfg.MVPPoint={}; end

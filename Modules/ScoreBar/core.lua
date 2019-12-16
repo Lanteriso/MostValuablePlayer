@@ -2,6 +2,7 @@
 local _, nPower = ...
 local config = nPower.Config
 
+
 local strsplit, format = strsplit, format
 
 local function GetRealMpFive()
@@ -220,14 +221,17 @@ end
 
 
 
-function P1Score_OnLoad(self)
+
+
+function P2Score_OnLoad(self,Xaxis,Yaxis)
     self.updateTimer = 0
     self.class = select(2, UnitClass("player"))
     self.spec = GetSpecialization()
 
     self:SetScale(config.scale)
     self:SetSize(18, 18)
-    self:SetPoint(unpack({"CENTER", UIParent, -500, -100}))
+
+    self:SetPoint(unpack({"CENTER", ScoreFrame, Xaxis,Yaxis}))
     self:EnableMouse(false)
 
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -270,8 +274,7 @@ function P1Score_OnLoad(self)
     end
 end
 
-function P1Score_OnEvent(self, event, ...)
-
+function P2Score_OnEvent(self, event,Junit, ...)
     if (self.extraPoints) then
         if (UnitHasVehicleUI("player")) then
             if (self.extraPoints:IsShown()) then
@@ -322,9 +325,9 @@ function P1Score_OnEvent(self, event, ...)
     end
 
     --UpdateArrow(self)
-    UpdateBarValue(self,"player")
-    UpdateBarColor(self,"player")
-    UpdateBarVisibility(self,"player")
+    UpdateBarValue(self,Junit)
+    UpdateBarColor(self,Junit)
+    UpdateBarVisibility(self,Junit)
 
     if (event == "PLAYER_ENTERING_WORLD") then
         if (InCombatLockdown()) then
@@ -348,517 +351,8 @@ function P1Score_OnEvent(self, event, ...)
     end
 end
 
-function P2Score_OnLoad(self)
-    self.updateTimer = 0
-    self.class = select(2, UnitClass("player"))
-    self.spec = GetSpecialization()
 
-    self:SetScale(config.scale)
-    self:SetSize(18, 18)
-    self:SetPoint(unpack({"CENTER", UIParent, -500, -120}))
-    self:EnableMouse(false)
 
-    self:RegisterEvent("PLAYER_REGEN_ENABLED")
-    self:RegisterEvent("PLAYER_REGEN_DISABLED")
-    self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    self:RegisterEvent("PLAYER_TARGET_CHANGED")
-    self:RegisterEvent("PLAYER_TALENT_UPDATE")
-    self:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-    self:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_ENTERING_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_EXITING_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
-    self:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
-    self:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-
-    if (config.showCombatRegen) then
-        self:RegisterUnitEvent("UNIT_AURA", "player")
-    end
-
-    if (config.hp.show) then
-        self:RegisterUnitEvent("UNIT_HEALTH", "player")
-        self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
-        self:RegisterUnitEvent("UNIT_HEALTH_FREQUENT", "player")
-        --nPower:SetupHealth(self)
-    end
-
-    nPower:SetupPower(self)
-
-    if nPower:HasExtraPoints(self.class) then
-        --nPower:SetupExtraPoints(self)
-    end
-
-    if (self.class == "DEATHKNIGHT" and config.showRunes) then
-        --nPower:SetupRunes(self)
-    end
-
-    if (self.class == "PALADIN" and config.holyPower.showRunes) then
-        --nPower:SetupHolyPower(self)
-    end
-end
-
-function P2Score_OnEvent(self, event, ...)
-
-    if (self.extraPoints) then
-        if (UnitHasVehicleUI("player")) then
-            if (self.extraPoints:IsShown()) then
-                self.extraPoints:Hide()
-            end
-        else
-            local nump
-            if (self.class == "WARLOCK") then
-                nump = WarlockPowerBar_UnitPower("player")
-            elseif (self.class == "PALADIN") then
-                nump = UnitPower("player", Enum.PowerType.HolyPower)
-            elseif (self.class == "ROGUE" or self.class == "DRUID") then
-                nump = UnitPower("player", Enum.PowerType.ComboPoints)
-            elseif (self.class == "MONK") then
-                nump = UnitPower("player", Enum.PowerType.Chi)
-            elseif (self.class == "MAGE") then
-                nump = UnitPower("player", Enum.PowerType.ArcaneCharges)
-            end
-
-            self.extraPoints:SetTextColor(SetPowerColor(self))
-            self.extraPoints:SetText(nump == 0 and "" or nump)
-
-            if (not self.extraPoints:IsShown()) then
-                self.extraPoints:Show()
-            end
-
-            nPower:UpdateHealthTextLocation(self, nump)
-        end
-    end
-
-    if (self.mpreg and (event == "UNIT_AURA" or event == "PLAYER_ENTERING_WORLD")) then
-        self.mpreg:SetText(GetRealMpFive())
-    end
-
-    if (self.HPText) then
-        if (UnitHasVehicleUI("player")) then
-            if (self.HPText:IsShown()) then
-                self.HPText:Hide()
-            end
-        else
-            self.HPText:SetTextColor(unpack(config.hp.hpFontColor))
-            self.HPText:SetText(GetHPPercentage())
-
-            if (not self.HPText:IsShown()) then
-                self.HPText:Show()
-            end
-        end
-    end
-
-    --UpdateArrow(self)
-    UpdateBarValue(self,"party1")
-    UpdateBarColor(self,"party1")
-    UpdateBarVisibility(self,"party1")
-
-    if (event == "PLAYER_ENTERING_WORLD") then
-        if (InCombatLockdown()) then
-            securecall("UIFrameFadeIn", self, 0.35, self:GetAlpha(), 1)
-        else
-            securecall("UIFrameFadeOut", self, 0.35, self:GetAlpha(), config.inactiveAlpha)
-        end
-    elseif (event == "PLAYER_REGEN_DISABLED") then
-        securecall("UIFrameFadeIn", self, 0.35, self:GetAlpha(), 1)
-    elseif (event == "PLAYER_REGEN_ENABLED") then
-        securecall("UIFrameFadeOut", self, 0.35, self:GetAlpha(), config.inactiveAlpha)
-    elseif (event == "PLAYER_LEVEL_UP") then
-        local level = ...
-        if level >= PALADINPOWERBAR_SHOW_LEVEL then
-            self:UnregisterEvent("PLAYER_LEVEL_UP")
-            nPower:SetupHolyPower(self)
-        end
-    elseif (event == "PLAYER_TALENT_UPDATE") then
-        self.spec = GetSpecialization()
-        nPower:UpdateHealthTextLocation(self)
-    end
-end
-
-function P3Score_OnLoad(self)
-    self.updateTimer = 0
-    self.class = select(2, UnitClass("player"))
-    self.spec = GetSpecialization()
-
-    self:SetScale(config.scale)
-    self:SetSize(18, 18)
-    self:SetPoint(unpack({"CENTER", UIParent, -500, -140}))
-    self:EnableMouse(false)
-
-    self:RegisterEvent("PLAYER_REGEN_ENABLED")
-    self:RegisterEvent("PLAYER_REGEN_DISABLED")
-    self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    self:RegisterEvent("PLAYER_TARGET_CHANGED")
-    self:RegisterEvent("PLAYER_TALENT_UPDATE")
-    self:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-    self:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_ENTERING_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_EXITING_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
-    self:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
-    self:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-
-    if (config.showCombatRegen) then
-        self:RegisterUnitEvent("UNIT_AURA", "player")
-    end
-
-    if (config.hp.show) then
-        self:RegisterUnitEvent("UNIT_HEALTH", "player")
-        self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
-        self:RegisterUnitEvent("UNIT_HEALTH_FREQUENT", "player")
-        --nPower:SetupHealth(self)
-    end
-
-    nPower:SetupPower(self)
-
-    if nPower:HasExtraPoints(self.class) then
-        --nPower:SetupExtraPoints(self)
-    end
-
-    if (self.class == "DEATHKNIGHT" and config.showRunes) then
-        --nPower:SetupRunes(self)
-    end
-
-    if (self.class == "PALADIN" and config.holyPower.showRunes) then
-        --nPower:SetupHolyPower(self)
-    end
-end
-
-function P3Score_OnEvent(self, event, ...)
-
-    if (self.extraPoints) then
-        if (UnitHasVehicleUI("player")) then
-            if (self.extraPoints:IsShown()) then
-                self.extraPoints:Hide()
-            end
-        else
-            local nump
-            if (self.class == "WARLOCK") then
-                nump = WarlockPowerBar_UnitPower("player")
-            elseif (self.class == "PALADIN") then
-                nump = UnitPower("player", Enum.PowerType.HolyPower)
-            elseif (self.class == "ROGUE" or self.class == "DRUID") then
-                nump = UnitPower("player", Enum.PowerType.ComboPoints)
-            elseif (self.class == "MONK") then
-                nump = UnitPower("player", Enum.PowerType.Chi)
-            elseif (self.class == "MAGE") then
-                nump = UnitPower("player", Enum.PowerType.ArcaneCharges)
-            end
-
-            self.extraPoints:SetTextColor(SetPowerColor(self))
-            self.extraPoints:SetText(nump == 0 and "" or nump)
-
-            if (not self.extraPoints:IsShown()) then
-                self.extraPoints:Show()
-            end
-
-            nPower:UpdateHealthTextLocation(self, nump)
-        end
-    end
-
-    if (self.mpreg and (event == "UNIT_AURA" or event == "PLAYER_ENTERING_WORLD")) then
-        self.mpreg:SetText(GetRealMpFive())
-    end
-
-    if (self.HPText) then
-        if (UnitHasVehicleUI("player")) then
-            if (self.HPText:IsShown()) then
-                self.HPText:Hide()
-            end
-        else
-            self.HPText:SetTextColor(unpack(config.hp.hpFontColor))
-            self.HPText:SetText(GetHPPercentage())
-
-            if (not self.HPText:IsShown()) then
-                self.HPText:Show()
-            end
-        end
-    end
-
-    --UpdateArrow(self)
-    UpdateBarValue(self,"party2")
-    UpdateBarColor(self,"party2")
-    UpdateBarVisibility(self,"party2")
-
-    if (event == "PLAYER_ENTERING_WORLD") then
-        if (InCombatLockdown()) then
-            securecall("UIFrameFadeIn", self, 0.35, self:GetAlpha(), 1)
-        else
-            securecall("UIFrameFadeOut", self, 0.35, self:GetAlpha(), config.inactiveAlpha)
-        end
-    elseif (event == "PLAYER_REGEN_DISABLED") then
-        securecall("UIFrameFadeIn", self, 0.35, self:GetAlpha(), 1)
-    elseif (event == "PLAYER_REGEN_ENABLED") then
-        securecall("UIFrameFadeOut", self, 0.35, self:GetAlpha(), config.inactiveAlpha)
-    elseif (event == "PLAYER_LEVEL_UP") then
-        local level = ...
-        if level >= PALADINPOWERBAR_SHOW_LEVEL then
-            self:UnregisterEvent("PLAYER_LEVEL_UP")
-            nPower:SetupHolyPower(self)
-        end
-    elseif (event == "PLAYER_TALENT_UPDATE") then
-        self.spec = GetSpecialization()
-        nPower:UpdateHealthTextLocation(self)
-    end
-end
-
-function P4Score_OnLoad(self)
-    self.updateTimer = 0
-    self.class = select(2, UnitClass("player"))
-    self.spec = GetSpecialization()
-
-    self:SetScale(config.scale)
-    self:SetSize(18, 18)
-    self:SetPoint(unpack({"CENTER", UIParent, -500, -160}))
-    self:EnableMouse(false)
-
-    self:RegisterEvent("PLAYER_REGEN_ENABLED")
-    self:RegisterEvent("PLAYER_REGEN_DISABLED")
-    self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    self:RegisterEvent("PLAYER_TARGET_CHANGED")
-    self:RegisterEvent("PLAYER_TALENT_UPDATE")
-    self:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-    self:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_ENTERING_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_EXITING_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
-    self:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
-    self:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-
-    if (config.showCombatRegen) then
-        self:RegisterUnitEvent("UNIT_AURA", "player")
-    end
-
-    if (config.hp.show) then
-        self:RegisterUnitEvent("UNIT_HEALTH", "player")
-        self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
-        self:RegisterUnitEvent("UNIT_HEALTH_FREQUENT", "player")
-        --nPower:SetupHealth(self)
-    end
-
-    nPower:SetupPower(self)
-
-    if nPower:HasExtraPoints(self.class) then
-        --nPower:SetupExtraPoints(self)
-    end
-
-    if (self.class == "DEATHKNIGHT" and config.showRunes) then
-        --nPower:SetupRunes(self)
-    end
-
-    if (self.class == "PALADIN" and config.holyPower.showRunes) then
-        --nPower:SetupHolyPower(self)
-    end
-end
-
-function P4Score_OnEvent(self, event, ...)
-
-    if (self.extraPoints) then
-        if (UnitHasVehicleUI("player")) then
-            if (self.extraPoints:IsShown()) then
-                self.extraPoints:Hide()
-            end
-        else
-            local nump
-            if (self.class == "WARLOCK") then
-                nump = WarlockPowerBar_UnitPower("player")
-            elseif (self.class == "PALADIN") then
-                nump = UnitPower("player", Enum.PowerType.HolyPower)
-            elseif (self.class == "ROGUE" or self.class == "DRUID") then
-                nump = UnitPower("player", Enum.PowerType.ComboPoints)
-            elseif (self.class == "MONK") then
-                nump = UnitPower("player", Enum.PowerType.Chi)
-            elseif (self.class == "MAGE") then
-                nump = UnitPower("player", Enum.PowerType.ArcaneCharges)
-            end
-
-            self.extraPoints:SetTextColor(SetPowerColor(self))
-            self.extraPoints:SetText(nump == 0 and "" or nump)
-
-            if (not self.extraPoints:IsShown()) then
-                self.extraPoints:Show()
-            end
-
-            nPower:UpdateHealthTextLocation(self, nump)
-        end
-    end
-
-    if (self.mpreg and (event == "UNIT_AURA" or event == "PLAYER_ENTERING_WORLD")) then
-        self.mpreg:SetText(GetRealMpFive())
-    end
-
-    if (self.HPText) then
-        if (UnitHasVehicleUI("player")) then
-            if (self.HPText:IsShown()) then
-                self.HPText:Hide()
-            end
-        else
-            self.HPText:SetTextColor(unpack(config.hp.hpFontColor))
-            self.HPText:SetText(GetHPPercentage())
-
-            if (not self.HPText:IsShown()) then
-                self.HPText:Show()
-            end
-        end
-    end
-
-    --UpdateArrow(self)
-    UpdateBarValue(self,"party3")
-    UpdateBarColor(self,"party3")
-    UpdateBarVisibility(self,"party3")
-
-    if (event == "PLAYER_ENTERING_WORLD") then
-        if (InCombatLockdown()) then
-            securecall("UIFrameFadeIn", self, 0.35, self:GetAlpha(), 1)
-        else
-            securecall("UIFrameFadeOut", self, 0.35, self:GetAlpha(), config.inactiveAlpha)
-        end
-    elseif (event == "PLAYER_REGEN_DISABLED") then
-        securecall("UIFrameFadeIn", self, 0.35, self:GetAlpha(), 1)
-    elseif (event == "PLAYER_REGEN_ENABLED") then
-        securecall("UIFrameFadeOut", self, 0.35, self:GetAlpha(), config.inactiveAlpha)
-    elseif (event == "PLAYER_LEVEL_UP") then
-        local level = ...
-        if level >= PALADINPOWERBAR_SHOW_LEVEL then
-            self:UnregisterEvent("PLAYER_LEVEL_UP")
-            nPower:SetupHolyPower(self)
-        end
-    elseif (event == "PLAYER_TALENT_UPDATE") then
-        self.spec = GetSpecialization()
-        nPower:UpdateHealthTextLocation(self)
-    end
-end
-
-function P5Score_OnLoad(self)
-    self.updateTimer = 0
-    self.class = select(2, UnitClass("player"))
-    self.spec = GetSpecialization()
-
-    self:SetScale(config.scale)
-    self:SetSize(18, 18)
-    self:SetPoint(unpack({"CENTER", UIParent, -500, -180}))
-    self:EnableMouse(false)
-
-    self:RegisterEvent("PLAYER_REGEN_ENABLED")
-    self:RegisterEvent("PLAYER_REGEN_DISABLED")
-    self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    self:RegisterEvent("PLAYER_TARGET_CHANGED")
-    self:RegisterEvent("PLAYER_TALENT_UPDATE")
-    self:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-    self:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_ENTERING_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_EXITING_VEHICLE", "player")
-    self:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
-    self:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
-    self:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-
-    if (config.showCombatRegen) then
-        self:RegisterUnitEvent("UNIT_AURA", "player")
-    end
-
-    if (config.hp.show) then
-        self:RegisterUnitEvent("UNIT_HEALTH", "player")
-        self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
-        self:RegisterUnitEvent("UNIT_HEALTH_FREQUENT", "player")
-        --nPower:SetupHealth(self)
-    end
-
-    nPower:SetupPower(self)
-
-    if nPower:HasExtraPoints(self.class) then
-        --nPower:SetupExtraPoints(self)
-    end
-
-    if (self.class == "DEATHKNIGHT" and config.showRunes) then
-        --nPower:SetupRunes(self)
-    end
-
-    if (self.class == "PALADIN" and config.holyPower.showRunes) then
-        --nPower:SetupHolyPower(self)
-    end
-end
-
-function P5Score_OnEvent(self, event, ...)
-
-    if (self.extraPoints) then
-        if (UnitHasVehicleUI("player")) then
-            if (self.extraPoints:IsShown()) then
-                self.extraPoints:Hide()
-            end
-        else
-            local nump
-            if (self.class == "WARLOCK") then
-                nump = WarlockPowerBar_UnitPower("player")
-            elseif (self.class == "PALADIN") then
-                nump = UnitPower("player", Enum.PowerType.HolyPower)
-            elseif (self.class == "ROGUE" or self.class == "DRUID") then
-                nump = UnitPower("player", Enum.PowerType.ComboPoints)
-            elseif (self.class == "MONK") then
-                nump = UnitPower("player", Enum.PowerType.Chi)
-            elseif (self.class == "MAGE") then
-                nump = UnitPower("player", Enum.PowerType.ArcaneCharges)
-            end
-
-            self.extraPoints:SetTextColor(SetPowerColor(self))
-            self.extraPoints:SetText(nump == 0 and "" or nump)
-
-            if (not self.extraPoints:IsShown()) then
-                self.extraPoints:Show()
-            end
-
-            nPower:UpdateHealthTextLocation(self, nump)
-        end
-    end
-
-    if (self.mpreg and (event == "UNIT_AURA" or event == "PLAYER_ENTERING_WORLD")) then
-        self.mpreg:SetText(GetRealMpFive())
-    end
-
-    if (self.HPText) then
-        if (UnitHasVehicleUI("player")) then
-            if (self.HPText:IsShown()) then
-                self.HPText:Hide()
-            end
-        else
-            self.HPText:SetTextColor(unpack(config.hp.hpFontColor))
-            self.HPText:SetText(GetHPPercentage())
-
-            if (not self.HPText:IsShown()) then
-                self.HPText:Show()
-            end
-        end
-    end
-
-    --UpdateArrow(self)
-    UpdateBarValue(self,"party4")
-    UpdateBarColor(self,"party4")
-    UpdateBarVisibility(self,"party4")
-
-    if (event == "PLAYER_ENTERING_WORLD") then
-        if (InCombatLockdown()) then
-            securecall("UIFrameFadeIn", self, 0.35, self:GetAlpha(), 1)
-        else
-            securecall("UIFrameFadeOut", self, 0.35, self:GetAlpha(), config.inactiveAlpha)
-        end
-    elseif (event == "PLAYER_REGEN_DISABLED") then
-        securecall("UIFrameFadeIn", self, 0.35, self:GetAlpha(), 1)
-    elseif (event == "PLAYER_REGEN_ENABLED") then
-        securecall("UIFrameFadeOut", self, 0.35, self:GetAlpha(), config.inactiveAlpha)
-    elseif (event == "PLAYER_LEVEL_UP") then
-        local level = ...
-        if level >= PALADINPOWERBAR_SHOW_LEVEL then
-            self:UnregisterEvent("PLAYER_LEVEL_UP")
-            nPower:SetupHolyPower(self)
-        end
-    elseif (event == "PLAYER_TALENT_UPDATE") then
-        self.spec = GetSpecialization()
-        nPower:UpdateHealthTextLocation(self)
-    end
-end
 function nPower:SetupHealth(self)
     self.HPText = self:CreateFontString(nil, "ARTWORK")
     if (config.hp.hpFontOutline) then
@@ -877,7 +371,7 @@ function nPower:SetupPower(self)
     self.Power:SetScale(self:GetScale())
     self.Power:SetSize(config.sizeWidth, 9)
     self.Power:SetPoint("CENTER", self, 0, -23)
-    self.Power:SetStatusBarTexture([[Interface\AddOns\nPower\media\statusbarTexture]])
+    self.Power:SetStatusBarTexture([[Interface\AddOns\MostValuablePlayer\Modules\ScoreBar\media\statusbarTexture]])
     self.Power:SetAlpha(0)
 
     self.Power.Value = self.Power:CreateFontString(nil, "ARTWORK")
@@ -903,7 +397,7 @@ function nPower:SetupPower(self)
 
     self.Power.Background = self.Power:CreateTexture(nil, "BACKGROUND")
     self.Power.Background:SetAllPoints(self.Power)
-    self.Power.Background:SetTexture([[Interface\AddOns\nPower\media\statusbarTexture]])
+    self.Power.Background:SetTexture([[Interface\AddOns\MostValuablePlayer\Modules\ScoreBar\media\statusbarTexture]])
     self.Power.Background:SetVertexColor(0.25, 0.25, 0.25, 1)
 
     self.Power.BackgroundShadow = CreateFrame("Frame", nil, self.Power)
@@ -912,7 +406,7 @@ function nPower:SetupPower(self)
     self.Power.BackgroundShadow:SetPoint("BOTTOMRIGHT", 4, -4)
     self.Power.BackgroundShadow:SetBackdrop({
         BgFile = [[Interface\ChatFrame\ChatFrameBackground]],
-        edgeFile = [[Interface\Addons\nPower\\media\textureGlow]], edgeSize = 4,
+        edgeFile = [[Interface\Addons\MostValuablePlayer\Modules\ScoreBar\\media\textureGlow]], edgeSize = 4,
         insets = {left = 3, right = 3, top = 3, bottom = 3}
     })
     self.Power.BackgroundShadow:SetBackdropColor(0.15, 0.15, 0.15, 1)
@@ -1026,3 +520,80 @@ function nPower:SetupHolyPower(self)
         nPower:UpdateHealthTextLocation(self)
     end
 end
+
+local function Jtime()
+    local Ti = Ti or 0
+    local Fi = Fi or CreateFrame("frame")
+    local t=GetTime()
+    if t-Ti>5000 then
+        StaticPopup1Button1:Click()
+        Ti = t
+        print("点击了")
+    end 
+end
+
+
+function ScoreFrame_OnLoad(self)
+    self:RegisterForDrag("LeftButton");
+
+    self.Fname = self:CreateFontString(nil, "ARTWORK")
+    self.Fname:SetFont(config.valueFont, 12, "THINOUTLINE")
+    self.Fname:SetShadowOffset(0, 0)
+    self.Fname:SetPoint("CENTER", self, "CENTER", 0, 0)
+    self.Fname:SetText("M V P")
+end
+local Jtime = 0
+function ScoreFrame_OnUpdate(self, elapsed)
+    --[[
+LFDMicroButton:Click()
+HonorFrameQueueButton:Click()
+LFDRoleCh:Click()
+StaticPopup1Button2:Click()
+LFDRoleCheckPopupAcceptButton:Click()
+PVPReadyDialogEnterBattleButton:Click()
+PVPMatchResults["leaveButton"]:Click()
+PVEFrameTab2:Click()
+
+    T, F = T or 0, F or CreateFrame("frame")
+    if X then 
+        X=nil 
+    else 
+        X=function()
+            local t=GetTime()
+            if t-T>1 then 
+                StaticPopup1Button1:Click()
+                T=t 
+            end 
+        end 
+    end 
+    F:SetScript("OnUpdate",X)
+
+    Jtime = Jtime +elapsed
+    if Jtime > 5 then
+        print("点击了")
+        Jtime =0
+
+            LFDMicroButton:Click()
+
+        
+
+            --HonorFrameQueueButton:Click()
+
+
+            --LFDRoleCh:Click()
+
+            StaticPopup1Button2:Click()
+
+            LFDRoleCheckPopupAcceptButton:Click()
+
+           -- PVPReadyDialogEnterBattleButton:Click()
+
+            PVPMatchResults["leaveButton"]:Click()
+
+            PVEFrameTab2:Click()
+
+   
+    end
+    ]]
+end
+

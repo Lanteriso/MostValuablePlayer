@@ -2,7 +2,7 @@
 ## Title: MostValuablePlayer
 ## Author: JANY
 ## Version: 8.2.5
-## Notes: MostValuablePlayer-20191215
+## Notes: MostValuablePlayer-20191216
 ## SavedVariables: MVP_Settings,MVPLilst
 ## X-Curse-Packaged-Version: v8.2.5 BFA
 ## X-Curse-Project-Name: MostValuablePlayer
