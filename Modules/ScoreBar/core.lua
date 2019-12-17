@@ -389,7 +389,7 @@ function nPower:SetupPower(self)
 
     self.Power.sname = self.Power:CreateFontString(nil, "ARTWORK")
 
-    self.Power.sname:SetFont(config.valueFont, 12, "THINOUTLINE")
+    self.Power.sname:SetFont(config.nameFont, 12, "THINOUTLINE")
     self.Power.sname:SetShadowOffset(0, 0)
     self.Power.sname:SetPoint("LEFT", self.Power, "LEFT", 0, 0)
 
@@ -537,7 +537,7 @@ function ScoreFrame_OnLoad(self)
     self:RegisterForDrag("LeftButton");
 
     self.Fname = self:CreateFontString(nil, "ARTWORK")
-    self.Fname:SetFont(config.valueFont, 12, "THINOUTLINE")
+    self.Fname:SetFont(config.nameFont, 12, "THINOUTLINE")
     self.Fname:SetShadowOffset(0, 0)
     self.Fname:SetPoint("CENTER", self, "CENTER", 0, 0)
     self.Fname:SetText("M V P")

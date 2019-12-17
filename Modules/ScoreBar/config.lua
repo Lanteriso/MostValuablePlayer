@@ -14,6 +14,7 @@ nPower.Config = {
 
     valueAbbrev = true,
 
+    nameFont = "Fonts\\ARKai_T.ttf",
     valueFont = "Fonts\\ARIALN.ttf",
     valueFontSize = 20,
     valueFontOutline = true,
