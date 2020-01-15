@@ -720,13 +720,15 @@ function MVPvsFrame:CHALLENGE_MODE_COMPLETED(event, ...)--挑战模式完成时
     if IsAddOnLoaded("details") then
 	    local ticker = C_Timer.NewTicker(3, function(ticker)
 	        if not InCombatLockdown() then
-	        	GetMVPData(name,level,RemainingTime,keystoneUpgradeLevels)
+				GetMVPData(name,level,RemainingTime,keystoneUpgradeLevels)
+				MVPprint("本统计由 MostValuablePlayer 提供")
 	        	DataInitializations()
 	        	ticker:Cancel()   
 	        end  
 	    end)
 	else     
 		GetMVPData(name,level,RemainingTime,keystoneUpgradeLevels)
+		MVPprint("本统计由 MostValuablePlayer 提供")
 		DataInitializations()
 	end
 
